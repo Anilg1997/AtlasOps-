@@ -1,6 +1,6 @@
 package com.intellops.order.graphql;
 
-import com.intellops.order.dto.CustomerDto;
+import com.intellops.order.dto.OrderResponse;
 import com.intellops.order.service.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -16,12 +16,12 @@ public class CustomerGraphQlController {
     private final CustomerService customerService;
 
     @QueryMapping
-    public CustomerDto.Response customer(@Argument Long id) {
-        return customerService.getCustomer(id);
+    public OrderResponse.CustomerDto customer(@Argument Long id) {
+        return customerService.getCustomerById(id);
     }
 
     @QueryMapping
-    public List<CustomerDto.Response> allCustomers() {
-        return customerService.getAllCustomers();
+    public List<OrderResponse.CustomerDto> allCustomers() {
+        return customerService.listCustomers();
     }
 }

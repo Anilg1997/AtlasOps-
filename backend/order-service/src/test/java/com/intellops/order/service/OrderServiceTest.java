@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,7 +50,7 @@ class OrderServiceTest {
     @Test
     void getOrder_shouldReturnOrder() {
         Customer customer = Customer.builder().id(1L).customerNumber("CUST-001").name("John").email("john@test.com").build();
-        Order order = Order.builder().orderNumber("ORD-001").status("CONFIRMED").totalAmount(1500.0).customer(customer).build();
+        Order order = Order.builder().orderNumber("ORD-001").status("CONFIRMED").totalAmount(new BigDecimal("1500.00")).customer(customer).build();
         order.setId(1L);
 
         when(orderRepository.findByOrderNumber("ORD-001")).thenReturn(Optional.of(order));
@@ -93,7 +94,6 @@ class OrderServiceTest {
 
         when(orderRepository.findByOrderNumber("ORD-001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenReturn(order);
-        when(customerService.toDto(any())).thenReturn(mock(OrderResponse.CustomerDto.class));
 
         OrderResponse result = orderService.updateOrderStatus("ORD-001", request);
 
@@ -123,13 +123,13 @@ class OrderServiceTest {
         when(orderRepository.countByStatus("PROCESSING")).thenReturn(30L);
         when(orderRepository.countByStatus("SHIPPED")).thenReturn(25L);
         when(orderRepository.countByStatus("DELIVERED")).thenReturn(15L);
-        when(orderRepository.sumTotalAmount()).thenReturn(50000.0);
-        when(orderRepository.sumDeliveredAmount()).thenReturn(15000.0);
+        when(orderRepository.sumTotalAmount()).thenReturn(BigDecimal.valueOf(50000.0));
+        when(orderRepository.sumDeliveredAmount()).thenReturn(BigDecimal.valueOf(15000.0));
 
         var stats = orderService.getOrderStats();
 
         assertThat(stats.get("totalOrders")).isEqualTo(100L);
         assertThat(stats.get("pendingOrders")).isEqualTo(10L);
-        assertThat(stats.get("totalRevenue")).isEqualTo(50000.0);
+        assertThat(stats.get("totalRevenue")).isEqualTo(BigDecimal.valueOf(50000.0));
     }
 }

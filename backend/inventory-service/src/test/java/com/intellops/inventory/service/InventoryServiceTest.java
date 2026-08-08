@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +88,7 @@ class InventoryServiceTest {
                 .stockQuantity(50).reorderThreshold(10).build();
 
         StockReservation reservation = StockReservation.builder()
-                .orderId("ORD-123").productId("SKU-001").quantity(5)
+                .id("RES-001").orderId("ORD-123").productId("SKU-001").quantity(5)
                 .status("RESERVED").reservedAt(LocalDateTime.now())
                 .expiresAt(LocalDateTime.now().plusMinutes(30))
                 .build();
@@ -114,14 +115,14 @@ class InventoryServiceTest {
         Map<String, Object> result = inventoryService.reserveStock("ORD-123", "SKU-001", 10, 30);
 
         assertThat(result.get("success")).isEqualTo(false);
-        assertThat(result.get("message")).contains("Insufficient stock");
+        assertThat((String) result.get("message")).contains("Insufficient stock");
     }
 
     @Test
     void getProduct_shouldReturnDetails() {
         Product product = Product.builder()
                 .id("p1").sku("SKU-001").name("Widget")
-                .description("A useful widget").price(29.99)
+                .description("A useful widget").price(new BigDecimal("29.99"))
                 .category("Tools").stockQuantity(100).reorderThreshold(10)
                 .active(true).build();
 
@@ -130,6 +131,6 @@ class InventoryServiceTest {
         Map<String, Object> result = inventoryService.getProduct("SKU-001");
 
         assertThat(result.get("name")).isEqualTo("Widget");
-        assertThat(result.get("price")).isEqualTo(29.99);
+        assertThat(result.get("price")).isEqualTo(new BigDecimal("29.99"));
     }
 }

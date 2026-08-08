@@ -7,7 +7,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://admin:Mongo%402024@localhost:27017/intellops_inventory?authSource=admin
+      uri: mongodb://admin:Mongo%402024@localhost:27018/intellops_inventory?authSource=admin
 
   security:
     oauth2:

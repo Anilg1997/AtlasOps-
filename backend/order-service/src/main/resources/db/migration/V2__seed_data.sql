@@ -2,11 +2,11 @@
 -- Flyway migration V2: Sample customers and products for development/testing
 
 -- Sample Customers
-INSERT INTO customers (name, email, phone_number, address, created_at)
+INSERT INTO customers (customer_number, name, email, phone, address, created_at)
 VALUES
-    ('Acme Corp', 'admin@acmecorp.com', '+1-555-0100', '123 Main Street, Springfield, IL 62701', NOW()),
-    ('TechGlobal Inc.', 'orders@techglobal.io', '+1-555-0200', '456 Innovation Drive, San Francisco, CA 94105', NOW()),
-    ('RetailMax Solutions', 'procurement@retailmax.com', '+1-555-0300', '789 Commerce Blvd, New York, NY 10001', NOW());
+    ('CUST-0001', 'Acme Corp', 'admin@acmecorp.com', '+1-555-0100', '123 Main Street, Springfield, IL 62701', NOW()),
+    ('CUST-0002', 'TechGlobal Inc.', 'orders@techglobal.io', '+1-555-0200', '456 Innovation Drive, San Francisco, CA 94105', NOW()),
+    ('CUST-0003', 'RetailMax Solutions', 'procurement@retailmax.com', '+1-555-0300', '789 Commerce Blvd, New York, NY 10001', NOW());
 
 -- Sample Products
 INSERT INTO products (name, description, sku, price, category, created_at)

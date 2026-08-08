@@ -127,7 +127,7 @@ public class InventoryService {
         int end = Math.min(start + pageSize, products.size());
         List<Product> paged = start < products.size() ? products.subList(start, end) : List.of();
 
-        List<Map<String, Object>> productMaps = paged.stream().map(p -> Map.of(
+        List<Map<String, Object>> productMaps = paged.stream().map(p -> Map.<String, Object>of(
                 "id", p.getId(),
                 "sku", p.getSku(),
                 "name", p.getName(),
@@ -139,7 +139,7 @@ public class InventoryService {
                 "active", p.getActive()
         )).collect(Collectors.toList());
 
-        return Map.of(
+        return Map.<String, Object>of(
                 "products", productMaps,
                 "totalCount", products.size(),
                 "page", page,

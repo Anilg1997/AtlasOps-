@@ -25,9 +25,9 @@ public class BillingEventPublisher {
                 "orderNumber", invoice.getOrderNumber(),
                 "accountNumber", account.getAccountNumber(),
                 "customerEmail", account.getCustomerEmail(),
-                "amount", invoice.getAmount(),
+                "amount", invoice.getTotalAmount(),
                 "dueDate", invoice.getDueDate().toString(),
-                "status", invoice.getStatus().name(),
+                "status", invoice.getStatus(),
                 "timestamp", LocalDateTime.now().toString()
         );
         kafkaTemplate.send(KafkaConfig.INVOICE_CREATED_TOPIC, invoice.getInvoiceNumber(), event);

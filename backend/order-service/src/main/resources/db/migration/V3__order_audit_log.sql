@@ -1,10 +1,6 @@
--- Order Service Flyway Migration V1
--- Note: Tables are created via init.sql, this migration is for schema evolution
-
--- Add pgvector extension if not already present
-CREATE EXTENSION IF NOT EXISTS vector;
-
+-- Order Service Flyway Migration V3
 -- Audit log table for tracking order changes
+
 CREATE TABLE IF NOT EXISTS order_audit_log (
     id BIGSERIAL PRIMARY KEY,
     order_id BIGINT NOT NULL,

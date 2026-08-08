@@ -1,4 +1,6 @@
--- AI Co-Pilot RAG Schema
+-- AI Co-Pilot RAG Schema (Flyway V4 — shared intellops_order database)
+
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Document chunks for RAG
 CREATE TABLE IF NOT EXISTS document_chunks (

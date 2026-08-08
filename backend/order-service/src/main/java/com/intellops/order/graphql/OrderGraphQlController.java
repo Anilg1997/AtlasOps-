@@ -12,7 +12,7 @@ import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
-public class OrderGraphQLController {
+public class OrderGraphQlController {
 
     private final OrderService orderService;
 

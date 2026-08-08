@@ -2,11 +2,7 @@ package com.intellops.inventory.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.mongodb.MongoDatabaseFactory;
-import org.springframework.data.mongodb.core.convert.MongoConverter;
 import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
-import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,7 +11,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 
 @Configuration
-@EnableMongoRepositories(basePackages = "com.intellops.inventory.repository")
 public class MongoConfig {
 
     @Bean

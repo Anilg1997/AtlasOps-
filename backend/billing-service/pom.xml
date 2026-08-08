@@ -21,6 +21,10 @@
 
     <properties>
         <java.version>17</java.version>
+        <!-- JDK 24 compatibility: Spring Boot 3.2.x pins Mockito 5.7.0 + Byte Buddy 1.14.x,
+             which cannot instrument classes on Java 24. Override with Java 24-aware versions. -->
+        <mockito.version>5.17.0</mockito.version>
+        <byte-buddy.version>1.17.8</byte-buddy.version>
     </properties>
 
     <dependencies>

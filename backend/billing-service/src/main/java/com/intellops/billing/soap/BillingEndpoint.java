@@ -83,11 +83,11 @@ public class BillingEndpoint {
 
             addChild(doc, root, "invoiceNumber", invoice.getInvoiceNumber());
             addChild(doc, root, "orderNumber", invoice.getOrderNumber());
-            addChild(doc, root, "status", invoice.getStatus().name());
-            addChild(doc, root, "amount", invoice.getAmount().toPlainString());
-            addChild(doc, root, "paidAmount", invoice.getPaidAmount().toPlainString());
+            addChild(doc, root, "status", invoice.getStatus());
+            addChild(doc, root, "amount", invoice.getTotalAmount().toPlainString());
+            addChild(doc, root, "paidAmount", invoice.getTotalAmount().toPlainString());
             addChild(doc, root, "dueDate", invoice.getDueDate().toString());
-            addChild(doc, root, "customerEmail", invoice.getAccount().getCustomerEmail());
+            addChild(doc, root, "customerEmail", invoice.getCustomerEmail());
 
             return new DOMSource(doc);
         } catch (Exception e) {
@@ -137,25 +137,17 @@ public class BillingEndpoint {
             String paymentMethod = getElementText(request, "paymentMethod");
             String transactionId = getElementTextSafe(request, "transactionId");
 
-            PaymentDto.CreateRequest paymentRequest = PaymentDto.CreateRequest.builder()
-                    .invoiceNumber(invoiceNumber)
-                    .amount(amount)
-                    .paymentMethod(paymentMethod)
-                    .transactionId(transactionId)
-                    .notes("SOAP legacy payment")
-                    .build();
-
-            PaymentDto.Response payment = billingService.processPayment(paymentRequest);
-            BillingAccount account = billingService.getAccountEntityByNumber(payment.getAccountNumber());
+            Invoice paidInvoice = billingService.processPayment(invoiceNumber, paymentMethod, transactionId);
 
             Document doc = createDocument();
             Element root = doc.createElementNS(NAMESPACE_URI, "submitPaymentResponse");
             doc.appendChild(root);
 
             addChild(doc, root, "success", "true");
-            addChild(doc, root, "paymentRef", payment.getPaymentRef());
+            addChild(doc, root, "paymentRef", paidInvoice.getTransactionId() != null ? paidInvoice.getTransactionId()
+                    : "SOAP-" + System.currentTimeMillis());
             addChild(doc, root, "message", "Payment processed successfully via legacy SOAP billing system");
-            addChild(doc, root, "updatedBalance", account.getBalance().toPlainString());
+            addChild(doc, root, "updatedBalance", paidInvoice.getTotalAmount().toPlainString());
 
             return new DOMSource(doc);
         } catch (Exception e) {
@@ -180,7 +172,9 @@ public class BillingEndpoint {
             BillingAccount account = accountRepository.findByAccountNumber(accountNumber)
                     .orElseThrow(() -> new ResourceNotFoundException("BillingAccount", "accountNumber", accountNumber));
 
-            var invoices = invoiceRepository.findByAccountIdOrderByCreatedAtDesc(account.getId());
+            var invoices = invoiceRepository.findAll().stream()
+                    .filter(inv -> account.getCustomerEmail().equals(inv.getCustomerEmail()))
+                    .toList();
 
             Document doc = createDocument();
             Element root = doc.createElementNS(NAMESPACE_URI, "getBillingHistoryResponse");
@@ -194,10 +188,9 @@ public class BillingEndpoint {
 
                 addChild(doc, entry, "date", inv.getCreatedAt().toLocalDate().toString());
                 addChild(doc, entry, "type", "INVOICE");
-                addChild(doc, entry, "description",
-                        inv.getDescription() != null ? inv.getDescription() : "Invoice " + inv.getInvoiceNumber());
+                addChild(doc, entry, "description", "Invoice " + inv.getInvoiceNumber());
                 addChild(doc, entry, "reference", inv.getInvoiceNumber());
-                addChild(doc, entry, "amount", inv.getAmount().toPlainString());
+                addChild(doc, entry, "amount", inv.getTotalAmount().toPlainString());
             }
 
             return new DOMSource(doc);
