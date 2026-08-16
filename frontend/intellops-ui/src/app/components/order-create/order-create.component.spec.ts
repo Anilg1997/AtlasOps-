@@ -1,6 +1,10 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { provideRouter } from '@angular/router';
+
+@Component({ selector: 'stub-order-detail', template: '' })
+class StubOrderDetailComponent {}
 import { of, throwError } from 'rxjs';
 import { OrderCreateComponent } from './order-create.component';
 import { OrderService, Order, CustomerDto, LineItemDto, ProductDto } from '../../services/order.service';
@@ -57,7 +61,7 @@ describe('OrderCreateComponent', () => {
     await TestBed.configureTestingModule({
       imports: [OrderCreateComponent],
       providers: [
-        provideRouter([]),
+        provideRouter([{ path: 'orders/:orderNumber', component: StubOrderDetailComponent }]),
         { provide: OrderService, useValue: orderServiceSpy }
       ]
     }).compileComponents();

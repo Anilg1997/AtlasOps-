@@ -53,6 +53,7 @@ describe('InventoryService', () => {
     service.getProducts('electronics', 2, 50).subscribe();
 
     const req = httpMock.expectOne('/api/v1/inventory/products?page=2&pageSize=50&category=electronics');
+    expect(req.request.method).toBe('GET');
     req.flush(mockResponse);
   });
 
@@ -78,6 +79,7 @@ describe('InventoryService', () => {
     service.checkStock('p1').subscribe();
 
     const req = httpMock.expectOne('/api/v1/inventory/stock/p1?quantity=1');
+    expect(req.request.method).toBe('GET');
     req.flush({ available: true });
   });
 });
