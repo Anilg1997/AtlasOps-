@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { OrderService } from '../../services/order.service';
+import { ToastService } from '../../services/notification/toast.service';
 
 @Component({
   selector: 'app-order-create',
@@ -75,7 +76,7 @@ export class OrderCreateComponent {
   loading = false;
   error = '';
 
-  constructor(private orderService: OrderService, private router: Router) {}
+  constructor(private orderService: OrderService, private router: Router, private toastService: ToastService) {}
 
   addItem() { this.lineItems.push({ productId: null, quantity: 1 }); }
   removeItem(i: number) { this.lineItems.splice(i, 1); }
@@ -89,8 +90,15 @@ export class OrderCreateComponent {
       notes: this.notes
     };
     this.orderService.createOrder(data).subscribe({
-      next: (order) => this.router.navigate(['/orders', order.orderNumber]),
-      error: (err) => { this.loading = false; this.error = err.error?.message || 'Failed to create order'; }
+      next: (order) => {
+        this.toastService.success('Order created', `Order ${order.orderNumber} created successfully`);
+        this.router.navigate(['/orders', order.orderNumber]);
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = err.error?.message || 'Failed to create order';
+        this.toastService.error('Order creation failed', this.error);
+      }
     });
   }
 }

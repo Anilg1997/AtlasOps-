@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { CopilotService, Conversation, ActivityEvidence } from '../../services/copilot.service';
+import { ToastService } from '../../services/notification/toast.service';
 import { eventMeta as eventMetaFor, relativeTime as relativeTimeFor } from '../feed/activity-meta';
 
 interface ChatMsg {
@@ -169,7 +170,7 @@ export class ChatComponent implements OnInit {
   inputMessage = '';
   loading = false;
 
-  constructor(private copilotService: CopilotService) {}
+  constructor(private copilotService: CopilotService, private toastService: ToastService) {}
 
   ngOnInit() {
     this.copilotService.getConversations().subscribe(conv => this.conversations = conv);
@@ -202,6 +203,7 @@ export class ChatComponent implements OnInit {
       },
       error: () => {
         this.messages.push({ role: 'assistant', content: 'Sorry, I encountered an error. Please try again.', timestamp: new Date() });
+        this.toastService.error('Co-Pilot unavailable', 'The AI service could not be reached. Is Ollama running?');
         this.loading = false;
       }
     });

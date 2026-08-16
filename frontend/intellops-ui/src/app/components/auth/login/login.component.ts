@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { ToastService } from '../../../services/notification/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -55,19 +56,21 @@ export class LoginComponent {
   loading = false;
   error = '';
 
-  constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute) {}
+  constructor(private authService: AuthService, private router: Router, private route: ActivatedRoute, private toastService: ToastService) {}
 
   onSubmit() {
     this.loading = true;
     this.error = '';
     this.authService.login(this.email, this.password).subscribe({
       next: () => {
+        this.toastService.success('Signed in', 'Welcome back to IntelliOps');
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
         this.router.navigateByUrl(returnUrl);
       },
       error: (err) => {
         this.loading = false;
         this.error = err.error?.message || 'Invalid email or password';
+        this.toastService.error('Sign-in failed', this.error);
       }
     });
   }

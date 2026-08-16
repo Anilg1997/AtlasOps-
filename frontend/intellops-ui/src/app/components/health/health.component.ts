@@ -82,6 +82,7 @@ export class HealthComponent implements OnInit {
     { name: 'Inventory Service', port: 8082, url: 'http://localhost:8082/api/actuator/health', status: 'CHECKING', icon: 'fas fa-boxes-stacked' },
     { name: 'AI Co-Pilot', port: 8083, url: 'http://localhost:8083/api/v1/copilot/health', status: 'CHECKING', icon: 'fas fa-robot' },
     { name: 'Billing Service', port: 8084, url: 'http://localhost:8084/api/actuator/health', status: 'CHECKING', icon: 'fas fa-file-invoice-dollar' },
+    { name: 'Notification/Activity', port: 8085, url: 'http://localhost:8085/actuator/health', status: 'CHECKING', icon: 'fas fa-stream' },
   ];
 
   constructor(private http: HttpClient) {}
