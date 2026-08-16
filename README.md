@@ -19,7 +19,7 @@
   [![gRPC](https://img.shields.io/badge/gRPC-internal-4285F4?style=flat-square)](https://grpc.io/)
   [![Kafka](https://img.shields.io/badge/Kafka-events-231F20?style=flat-square&logo=apachekafka)](https://kafka.apache.org/)
   [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)](https://docker.com/)
-  [![Tests](https://img.shields.io/badge/tests-223%20unit%20tests-2ea44f?style=flat-square)](.github/workflows)
+  [![Tests](https://img.shields.io/badge/tests-226%20unit%20tests-2ea44f?style=flat-square)](.github/workflows)
   [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
   <br>
@@ -169,7 +169,7 @@ AtlasOps is an enterprise-grade operations platform that sits on top of **order 
 - Invoice/payment management with status tracking
 
 ### 🧪 Testing
-- **223 unit tests** across all services (83 backend + 140 Angular frontend)
+- **226 unit tests** across all services (83 backend + 143 Angular frontend)
 - JUnit 5 + Mockito + AssertJ
 - Spring Boot `@WebMvcTest` for controllers
 - Testcontainers for MongoDB & ChromaDB integration
@@ -312,8 +312,8 @@ cd backend && mvn verify
 | **Inventory** | 7 tests | InventoryService, ProductCatalogController |
 | **Billing** | 7 tests | BillingService |
 | **Notification/Activity** | 17 tests | ActivityLogService, KafkaEventConsumer, ActivityLogController |
-| **Frontend (Angular)** | 140 tests | App, Login, Register, Dashboard, OrderList, OrderCreate, OrderDetail, Billing, Inventory, Health, Chat, Feed, RecentActivity, Layout, NotFound, Toasts; AuthService, BillingService, OrderService, InventoryService, CopilotService, ActivityService, ToastService; authGuard, authInterceptor |
-| **Total** | **223 tests** | |
+| **Frontend (Angular)** | 143 tests | App, Login, Register, RegisterSuccess, Dashboard, OrderList, OrderCreate, OrderDetail, Billing, Inventory, Health, Chat, Feed, RecentActivity, Layout, NotFound, Toasts; AuthService, BillingService, OrderService, InventoryService, CopilotService, ActivityService, ToastService; authGuard, authInterceptor |
+| **Total** | **226 tests** | |
 
 ---
 
@@ -356,7 +356,7 @@ cd backend && mvn verify
 7. **Multi-API** — REST, GraphQL, gRPC, SOAP, SSE — all in one platform
 8. **Full auth** — JWT, bcrypt, role-based access
 9. **Modern frontend** — Angular 17, reactive forms, SSE streaming
-10. **Comprehensive tests** — 223 unit tests across all services
+10. **Comprehensive tests** — 226 unit tests across all services
 11. **Cloud-ready** — Docker Compose, CI/CD, AWS deploy guides
 12. **Enterprise UX** — Order forms, toast notifications, system health monitoring, responsive design
 
