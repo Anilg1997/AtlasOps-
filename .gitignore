@@ -69,3 +69,6 @@ data/
 .settings/
 .project
 .classpath
+
+# Local build tools (downloaded, not committed)
+.tools/

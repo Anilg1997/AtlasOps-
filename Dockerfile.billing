@@ -1,14 +1,10 @@
-FROM eclipse-temurin:17-jdk-alpine AS build
+FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
-COPY pom.xml /build/pom.xml
-COPY backend/billing-service /build/billing-service
-COPY backend/order-service/pom.xml /build/order-service/pom.xml
-COPY backend/inventory-service/pom.xml /build/inventory-service/pom.xml
-COPY backend/ai-copilot-service/pom.xml /build/ai-copilot-service/pom.xml
-RUN apk add --no-cache maven && cd /build && mvn package -pl billing-service -am -DskipTests -q
+COPY . .
+RUN mvn -q package -pl backend/billing-service -am -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY --from=build /build/billing-service/target/*.jar /app/billing-service.jar
+COPY --from=build /build/backend/billing-service/target/*.jar /app/billing-service.jar
 EXPOSE 8084
 ENTRYPOINT ["java", "-jar", "/app/billing-service.jar"]

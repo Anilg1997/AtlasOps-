@@ -2,9 +2,9 @@ package com.intellops.copilot.service;
 
 import com.intellops.copilot.mongo.Conversation;
 import com.intellops.copilot.mongo.ConversationRepository;
-import com.intellops.copilot.tools.BillingTool;
-import com.intellops.copilot.tools.InventoryTool;
-import com.intellops.copilot.tools.OrderTool;
+import com.intellops.copilot.service.tools.BillingTool;
+import com.intellops.copilot.service.tools.InventoryTool;
+import com.intellops.copilot.service.tools.OrderTool;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
@@ -100,6 +100,7 @@ public class AiCopilotService {
     }
 
     public String chat(String conversationId, String message) {
+        ensureModel();
         try {
             String ragContext = ragService.retrieveRelevantContext(message);
             String fullPrompt = String.format(
@@ -128,6 +129,7 @@ public class AiCopilotService {
     }
 
     public Flux<String> streamChat(String conversationId, String message) {
+        ensureModel();
         try {
             String ragContext = ragService.retrieveRelevantContext(message);
             String fullPrompt = String.format(
@@ -184,6 +186,19 @@ public class AiCopilotService {
                 .updatedAt(LocalDateTime.now())
                 .build();
         return conversationRepository.save(conversation);
+    }
+
+    /**
+     * Ensures the Ollama chat model is initialized before serving a request.
+     * <p>
+     * The first boot of a demo environment can race with Ollama pulling the
+     * model weights, so we retry initialization lazily instead of permanently
+     * falling back to the canned responses.
+     */
+    private synchronized void ensureModel() {
+        if (chatModel == null || streamingChatModel == null) {
+            init();
+        }
     }
 
     private void saveMessage(String conversationId, String role, String content) {

@@ -30,6 +30,22 @@
 
 ---
 
+## 🚀 Live Demo
+
+**Try the AI co-pilot live: [atlasops-demo.up.railway.app](<PASTE_LIVE_URL_HERE>)**
+
+[![AtlasOps Demo](docs/demo.gif)](docs/demo.gif) <!-- Replace with your 60-90s screen capture -->
+
+_Register with any email/password, then ask the co-pilot: **"Why is order ORD-1001 on hold?"**_
+
+The demo runs the minimal deployable slice (`docker-compose.demo.yml`):
+auth + order + inventory + AI co-pilot with a small local LLM
+(`llama3.2:3b`) — see [DEPLOY.md](DEPLOY.md) for the deployment walkthrough.
+The full event-driven stack (Kafka, Oracle/SOAP billing, ChromaDB) lives in
+`docker-compose.yml` for local review.
+
+---
+
 ## Overview
 
 AtlasOps is an enterprise-grade operations platform that sits on top of **order management, inventory, billing, and legacy systems**, providing:
@@ -195,10 +211,24 @@ AtlasOps is an enterprise-grade operations platform that sits on top of **order 
 | Ollama | Latest | Local LLM for AI features |
 
 ### Setup
+
+#### Fastest: run the demo slice (everything containerized)
+```bash
+git clone https://github.com/Anilg1997/AtlasOps-
+cd AtlasOps-
+
+docker compose -f docker-compose.demo.yml up --build
+open http://localhost:8080
+```
+This brings up Postgres, MongoDB, Ollama (`llama3.2:3b`), the four backend
+services, seed data, and the frontend — no local Java/Node needed. Deploy
+steps for Railway are in [DEPLOY.md](DEPLOY.md).
+
+#### Full local development stack
 ```bash
 # 1. Clone
-git clone https://github.com/Anilg1997/AtlasOps-AI-Enterprise-Platform.git
-cd AtlasOps-AI-Enterprise-Platform
+git clone https://github.com/Anilg1997/AtlasOps-
+cd AtlasOps-
 
 # 2. Build all services
 mvn clean install -DskipTests
@@ -243,8 +273,14 @@ atlasops-platform/
 │       └── interceptors/          # JWT interceptor
 ├── screenshots/                   # Application screenshots
 ├── docs/                          # Architecture & decision docs
+├── infra/
+│   ├── postgres/                  # DB init scripts (databases, extensions)
+│   ├── mongodb/                   # Collections + product seeds
+│   └── demo/                      # Demo seed data (orders, vector-store docs)
 ├── .github/workflows/             # CI/CD pipelines
 ├── docker-compose.yml             # Full local dev environment
+├── docker-compose.demo.yml        # Minimal deployable demo slice
+├── DEPLOY.md                      # Railway/Render deployment guide
 └── README.md                      # This file
 ```
 

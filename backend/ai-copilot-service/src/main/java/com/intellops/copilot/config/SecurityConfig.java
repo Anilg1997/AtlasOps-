@@ -21,7 +21,9 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/v1/copilot/**",
                     "/api/actuator/health",
-                    "/actuator/health"
+                    "/actuator/health",
+                    "/health",
+                    "/ready"
                 ).permitAll()
                 .anyRequest().authenticated()
             );

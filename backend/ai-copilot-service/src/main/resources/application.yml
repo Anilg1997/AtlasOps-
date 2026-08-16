@@ -28,7 +28,9 @@ intellops:
   ai:
     ollama:
       base-url: http://localhost:11434
-      model: llama3.2
+      # Default local/full-stack model. The demo profile (docker-compose.demo.yml)
+      # overrides this to a smaller model via INTELLOPS_AI_OLLAMA_MODEL for faster cold starts.
+      model: llama3.1
       temperature: 0.7
     tools:
       order-service-url: http://localhost:8081

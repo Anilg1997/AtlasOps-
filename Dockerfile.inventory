@@ -1,5 +1,10 @@
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /build
+COPY . .
+RUN mvn -q package -pl backend/inventory-service -am -DskipTests
+
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-COPY backend/inventory-service/target/inventory-service-*.jar app.jar
+COPY --from=build /build/backend/inventory-service/target/*.jar /app/inventory-service.jar
 EXPOSE 8082 9091
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/inventory-service.jar"]

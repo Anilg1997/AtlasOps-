@@ -1,12 +1,7 @@
-FROM eclipse-temurin:17-jdk-alpine AS build
+FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
-COPY pom.xml /build/pom.xml
-COPY backend/auth-service /build/backend/auth-service
-COPY backend/order-service/pom.xml /build/backend/order-service/pom.xml
-COPY backend/inventory-service/pom.xml /build/backend/inventory-service/pom.xml
-COPY backend/ai-copilot-service/pom.xml /build/backend/ai-copilot-service/pom.xml
-COPY backend/billing-service/pom.xml /build/backend/billing-service/pom.xml
-RUN apk add --no-cache maven && cd /build && mvn package -pl backend/auth-service -am -DskipTests -q
+COPY . .
+RUN mvn -q package -pl backend/auth-service -am -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app

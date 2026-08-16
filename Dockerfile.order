@@ -1,0 +1,10 @@
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /build
+COPY . .
+RUN mvn -q package -pl backend/order-service -am -DskipTests
+
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=build /build/backend/order-service/target/*.jar /app/order-service.jar
+EXPOSE 8081
+ENTRYPOINT ["java", "-jar", "/app/order-service.jar"]

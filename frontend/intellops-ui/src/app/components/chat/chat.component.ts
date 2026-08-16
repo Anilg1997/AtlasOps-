@@ -65,7 +65,7 @@ interface ChatMsg {
         <div class="chat-input">
           <div class="input-wrapper">
             <textarea [(ngModel)]="inputMessage"
-                      (keydown.enter)="$event.shiftKey ? null : sendMessage(); $event.preventDefault()"
+                      (keydown.enter)="onKeydownEnter($event)"
                       placeholder="Ask about orders, inventory, billing..."
                       rows="1"
                       [disabled]="loading"></textarea>
@@ -137,6 +137,14 @@ export class ChatComponent implements OnInit {
 
   ngOnInit() {
     this.copilotService.getConversations().subscribe(conv => this.conversations = conv);
+  }
+
+  onKeydownEnter(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+    if (!keyboardEvent.shiftKey) {
+      this.sendMessage();
+    }
+    keyboardEvent.preventDefault();
   }
 
   sendMessage(override?: string) {

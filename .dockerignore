@@ -1,0 +1,12 @@
+.git
+.gitignore
+**/target
+**/node_modules
+**/dist
+frontend/intellops-ui/.angular
+.tools
+docs
+screenshots
+.github
+*.md
+LICENSE
