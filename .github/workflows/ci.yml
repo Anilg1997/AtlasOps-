@@ -44,12 +44,11 @@ jobs:
 
       - name: Build and test order-service
         run: |
-          cd backend/order-service
-          mvn clean verify -Dspring.profiles.active=test -DskipTests=false
+          ./mvnw -f backend/order-service/pom.xml clean verify -Dspring.profiles.active=test -DskipTests=false
 
       - name: Build entire platform
         run: |
-          mvn clean compile -DskipTests
+          ./mvnw clean compile -DskipTests
 
       - name: Upload test results
         if: always()

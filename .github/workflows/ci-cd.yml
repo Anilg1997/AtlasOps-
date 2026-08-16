@@ -59,13 +59,13 @@ jobs:
           cache: maven
 
       - name: Build All Services
-        run: mvn clean compile -DskipTests
+        run: ./mvnw clean compile -DskipTests
 
       - name: Run Unit Tests
-        run: mvn test -pl backend/auth-service,backend/order-service,backend/notification-service
+        run: ./mvnw test -pl backend/auth-service,backend/order-service,backend/notification-service
 
       - name: Package Services
-        run: mvn package -DskipTests -q
+        run: ./mvnw package -DskipTests -q
 
   docker-build:
     name: Build Docker Images
