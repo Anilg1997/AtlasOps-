@@ -34,6 +34,9 @@ public class Order {
     @Builder.Default
     private String status = "PENDING";
 
+    @Column(name = "status_reason", length = 255)
+    private String statusReason;
+
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;

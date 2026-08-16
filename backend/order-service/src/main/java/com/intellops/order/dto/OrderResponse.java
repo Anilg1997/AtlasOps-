@@ -19,6 +19,7 @@ public class OrderResponse {
     private String orderNumber;
     private CustomerDto customer;
     private String status;
+    private String statusReason;
     private BigDecimal totalAmount;
     private BigDecimal taxAmount;
     private String notes;

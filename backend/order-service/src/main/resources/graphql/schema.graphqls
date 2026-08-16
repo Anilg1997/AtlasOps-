@@ -9,6 +9,7 @@ type Order {
     orderNumber: String!
     customer: Customer
     status: String!
+    statusReason: String
     totalAmount: Float!
     taxAmount: Float!
     notes: String

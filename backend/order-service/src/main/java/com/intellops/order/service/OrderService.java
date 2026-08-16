@@ -96,6 +96,7 @@ public class OrderService {
         validateStatusTransition(oldStatus, newStatus);
 
         order.setStatus(newStatus);
+        order.setStatusReason(request.getReason());
         order = orderRepository.save(order);
 
         eventPublisher.publishOrderStatusChanged(orderNumber, oldStatus, newStatus);
@@ -120,7 +121,8 @@ public class OrderService {
 
     private void validateStatusTransition(String currentStatus, String newStatus) {
         Map<String, List<String>> validTransitions = Map.of(
-                "PENDING", List.of("CONFIRMED", "CANCELLED"),
+                "PENDING", List.of("CONFIRMED", "CANCELLED", "ON_HOLD"),
+                "ON_HOLD", List.of("CONFIRMED", "PROCESSING", "CANCELLED"),
                 "CONFIRMED", List.of("PROCESSING", "CANCELLED"),
                 "PROCESSING", List.of("SHIPPED", "CANCELLED"),
                 "SHIPPED", List.of("DELIVERED"),
@@ -146,6 +148,7 @@ public class OrderService {
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
+                .statusReason(order.getStatusReason())
                 .totalAmount(order.getTotalAmount())
                 .taxAmount(order.getTaxAmount())
                 .notes(order.getNotes())
