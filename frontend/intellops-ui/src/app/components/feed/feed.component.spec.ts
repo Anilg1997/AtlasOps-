@@ -1,6 +1,6 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { FeedComponent } from './feed.component';
 import { ActivityService, ActivityEntry, ActivityStats } from '../../services/activity.service';
 
@@ -133,4 +133,55 @@ describe('FeedComponent', () => {
     expect(keys).not.toContain('orderNumber');
     expect(keys).not.toContain('timestamp');
   });
+
+  it('should clear entries and stop loading when the activity request fails', () => {
+    activityServiceSpy.getActivity.and.returnValue(throwError(() => new Error('down')));
+
+    fixture.detectChanges();
+
+    expect(component.entries.length).toBe(0);
+    expect(component.loading).toBeFalse();
+    expect(activityServiceSpy.getStats).toHaveBeenCalled();
+  });
+
+  it('should reset stats when the stats request fails', () => {
+    component.stats = mockStats;
+    activityServiceSpy.getStats.and.returnValue(throwError(() => new Error('down')));
+
+    fixture.detectChanges();
+
+    expect(component.stats).toBeUndefined();
+  });
+
+  it('should reload automatically when auto-refresh is enabled', fakeAsync(() => {
+    component.autoRefresh = true;
+    component.onAutoRefreshChange();
+
+    const callsBefore = activityServiceSpy.getActivity.calls.count();
+    expect((component as any).timer).toBeDefined();
+
+    tick(15000);
+    expect(activityServiceSpy.getActivity.calls.count()).toBeGreaterThan(callsBefore);
+
+    component.autoRefresh = false;
+    component.onAutoRefreshChange();
+  }));
+
+  it('should stop auto-refresh when the toggle is turned off', () => {
+    component.autoRefresh = true;
+    component.onAutoRefreshChange();
+    expect((component as any).timer).toBeDefined();
+
+    component.autoRefresh = false;
+    component.onAutoRefreshChange();
+    expect((component as any).timer).toBeUndefined();
+  });
+
+  it('should clear the timer on destroy', fakeAsync(() => {
+    component.autoRefresh = true;
+    component.onAutoRefreshChange();
+
+    fixture.destroy();
+    expect((component as any).timer).toBeUndefined();
+  }));
 });
