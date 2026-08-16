@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { ChatComponent } from './chat.component';
 import { CopilotService, ChatMessage } from '../../services/copilot.service';
+import { ToastService } from '../../services/notification/toast.service';
 
 describe('ChatComponent', () => {
   let fixture: ComponentFixture<ChatComponent>;
@@ -51,7 +52,8 @@ describe('ChatComponent', () => {
       imports: [ChatComponent],
       providers: [
         provideRouter([]),
-        { provide: CopilotService, useValue: copilotServiceSpy }
+        { provide: CopilotService, useValue: copilotServiceSpy },
+        ToastService
       ]
     }).compileComponents();
 
@@ -128,5 +130,78 @@ describe('ChatComponent', () => {
     expect(evidence).toBeTruthy();
     expect(evidence?.textContent).toContain('Order Created');
     expect(evidence?.textContent).toContain('Order Status Changed');
+  });
+
+  it('should send the message when Enter is pressed without Shift', () => {
+    spyOn(component, 'sendMessage');
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+    const preventDefaultSpy = spyOn(event, 'preventDefault');
+
+    component.onKeydownEnter(event);
+
+    expect(component.sendMessage).toHaveBeenCalled();
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should not send the message when Shift+Enter is pressed', () => {
+    spyOn(component, 'sendMessage');
+    const event = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true });
+    const preventDefaultSpy = spyOn(event, 'preventDefault');
+
+    component.onKeydownEnter(event);
+
+    expect(component.sendMessage).not.toHaveBeenCalled();
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('should show an error message and toast when the chat call fails', () => {
+    copilotServiceSpy.chat.and.returnValue(throwError(() => new Error('boom')));
+    const toastSpy = spyOn(TestBed.inject(ToastService), 'error');
+
+    fixture.detectChanges();
+    component.sendMessage('Hello');
+    fixture.detectChanges();
+
+    expect(component.messages.length).toBe(2);
+    expect(component.messages[1].content).toContain('Sorry, I encountered an error');
+    expect(component.loading).toBeFalse();
+    expect(toastSpy).toHaveBeenCalledWith('Co-Pilot unavailable', jasmine.stringMatching(/Ollama/));
+  });
+
+  it('should start a new conversation by clearing messages and selection', () => {
+    component.activeConversationId = 'conv-1';
+    component.messages = [{ role: 'user', content: 'hi', timestamp: new Date() }];
+
+    component.newConversation();
+
+    expect(component.activeConversationId).toBeNull();
+    expect(component.messages.length).toBe(0);
+  });
+
+  it('should ignore empty or whitespace-only input messages', () => {
+    const chatSpy = copilotServiceSpy.chat;
+
+    fixture.detectChanges();
+    component.inputMessage = '   ';
+    component.sendMessage();
+    fixture.detectChanges();
+
+    expect(chatSpy).not.toHaveBeenCalled();
+    expect(component.messages.length).toBe(0);
+  });
+
+  it('should ignore messages while a request is in flight', () => {
+    const pending = new Subject<ChatMessage>();
+    copilotServiceSpy.chat.and.returnValue(pending);
+    fixture.detectChanges();
+
+    component.sendMessage('first');
+    component.sendMessage('second');
+
+    expect(copilotServiceSpy.chat).toHaveBeenCalledTimes(1);
+
+    pending.next(responseWithEvidence);
+    pending.complete();
+    fixture.detectChanges();
   });
 });
