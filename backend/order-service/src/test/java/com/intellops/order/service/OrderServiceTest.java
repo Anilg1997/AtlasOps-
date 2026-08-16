@@ -48,6 +48,38 @@ class OrderServiceTest {
     }
 
     @Test
+    void createOrder_shouldBuildOrderWithLineItemsAndPublish() {
+        CreateOrderRequest request = CreateOrderRequest.builder()
+                .customerId(1L)
+                .notes("Rush order")
+                .lineItems(List.of(
+                        CreateOrderRequest.LineItemRequest.builder().productId(10L).quantity(2).build()))
+                .build();
+
+        Customer customer = Customer.builder().id(1L).customerNumber("CUST-001").name("John").email("john@test.com").build();
+        Product product = Product.builder().id(10L).sku("SKU-001").name("Widget").price(new BigDecimal("75.00")).build();
+
+        when(customerService.getCustomerEntity(1L)).thenReturn(customer);
+        when(productService.getProductEntity(10L)).thenReturn(product);
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order order = invocation.getArgument(0);
+            order.setId(1L);
+            return order;
+        });
+        when(customerService.toDto(customer)).thenReturn(
+                OrderResponse.CustomerDto.builder().id(1L).customerNumber("CUST-001").name("John").email("john@test.com").build());
+
+        OrderResponse result = orderService.createOrder(request);
+
+        assertThat(result.getOrderNumber()).startsWith("ORD-");
+        assertThat(result.getStatus()).isEqualTo("PENDING");
+        // 2 x 75.00 = 150.00 subtotal + 8% tax (12.00) = 162.00
+        assertThat(result.getTotalAmount()).isEqualByComparingTo("162.00");
+        assertThat(result.getLineItems()).hasSize(1);
+        verify(eventPublisher).publishOrderCreated(anyString(), eq("CUST-001"));
+    }
+
+    @Test
     void getOrder_shouldReturnOrder() {
         Customer customer = Customer.builder().id(1L).customerNumber("CUST-001").name("John").email("john@test.com").build();
         Order order = Order.builder().orderNumber("ORD-001").status("CONFIRMED").totalAmount(new BigDecimal("1500.00")).customer(customer).build();
