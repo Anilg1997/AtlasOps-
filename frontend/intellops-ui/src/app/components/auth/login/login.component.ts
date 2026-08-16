@@ -63,6 +63,7 @@ export class LoginComponent {
     this.error = '';
     this.authService.login(this.email, this.password).subscribe({
       next: () => {
+        this.loading = false;
         this.toastService.success('Signed in', 'Welcome back to IntelliOps');
         const returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
         this.router.navigateByUrl(returnUrl);

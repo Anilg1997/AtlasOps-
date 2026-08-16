@@ -79,7 +79,7 @@ export class OrderCreateComponent {
   constructor(private orderService: OrderService, private router: Router, private toastService: ToastService) {}
 
   addItem() { this.lineItems.push({ productId: null, quantity: 1 }); }
-  removeItem(i: number) { this.lineItems.splice(i, 1); }
+  removeItem(i: number) { if (this.lineItems.length > 1) this.lineItems.splice(i, 1); }
 
   onSubmit() {
     this.loading = true;
@@ -91,6 +91,7 @@ export class OrderCreateComponent {
     };
     this.orderService.createOrder(data).subscribe({
       next: (order) => {
+        this.loading = false;
         this.toastService.success('Order created', `Order ${order.orderNumber} created successfully`);
         this.router.navigate(['/orders', order.orderNumber]);
       },

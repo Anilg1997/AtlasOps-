@@ -77,6 +77,7 @@ export class RegisterComponent {
     this.authService.register({ email: this.email, password: this.password, firstName: this.firstName, lastName: this.lastName })
       .subscribe({
         next: () => {
+          this.loading = false;
           this.toastService.success('Account created', 'You can now sign in');
           this.router.navigate(['/register/success']);
         },
