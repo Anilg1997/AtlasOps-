@@ -31,7 +31,7 @@ import { OrderService, Order } from '../../services/order.service';
           <tbody>
             <tr *ngFor="let order of orders">
               <td><a [routerLink]="['/orders', order.orderNumber]" class="order-link">{{ order.orderNumber }}</a></td>
-              <td>{{ order.customer?.name || 'N/A' }}</td>
+              <td>{{ order.customer.name || 'N/A' }}</td>
               <td><span class="badge" [ngClass]="'badge-' + order.status.toLowerCase()">{{ order.status }}</span></td>
               <td>\${{ order.totalAmount | number:'1.2-2' }}</td>
               <td>{{ order.createdAt | date:'short' }}</td>

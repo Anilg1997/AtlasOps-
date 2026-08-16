@@ -20,9 +20,9 @@ import { OrderService, Order } from '../../services/order.service';
       <div class="detail-grid">
         <div class="card">
           <h3><i class="fas fa-user"></i> Customer</h3>
-          <div class="info-row"><label>Name</label><span>{{ order.customer?.name || 'N/A' }}</span></div>
-          <div class="info-row"><label>Email</label><span>{{ order.customer?.email || 'N/A' }}</span></div>
-          <div class="info-row"><label>Customer #</label><span>{{ order.customer?.customerNumber || 'N/A' }}</span></div>
+          <div class="info-row"><label>Name</label><span>{{ order.customer.name || 'N/A' }}</span></div>
+          <div class="info-row"><label>Email</label><span>{{ order.customer.email || 'N/A' }}</span></div>
+          <div class="info-row"><label>Customer #</label><span>{{ order.customer.customerNumber || 'N/A' }}</span></div>
         </div>
 
         <div class="card">
@@ -41,8 +41,8 @@ import { OrderService, Order } from '../../services/order.service';
           </thead>
           <tbody>
             <tr *ngFor="let item of order.lineItems">
-              <td>{{ item.product?.name }}</td>
-              <td><code>{{ item.product?.sku }}</code></td>
+              <td>{{ item.product.name }}</td>
+              <td><code>{{ item.product.sku }}</code></td>
               <td>{{ item.quantity }}</td>
               <td>\${{ item.unitPrice | number:'1.2-2' }}</td>
               <td>\${{ item.subtotal | number:'1.2-2' }}</td>
