@@ -19,7 +19,7 @@
   [![gRPC](https://img.shields.io/badge/gRPC-internal-4285F4?style=flat-square)](https://grpc.io/)
   [![Kafka](https://img.shields.io/badge/Kafka-events-231F20?style=flat-square&logo=apachekafka)](https://kafka.apache.org/)
   [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)](https://docker.com/)
-  [![Tests](https://img.shields.io/badge/tests-54%20unit%20tests-2ea44f?style=flat-square)](.github/workflows)
+  [![Tests](https://img.shields.io/badge/tests-83%20unit%20tests-2ea44f?style=flat-square)](.github/workflows)
   [![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
   <br>
@@ -40,9 +40,11 @@ _Register with any email/password, then ask the co-pilot: **"Why is order ORD-10
 
 The demo runs the minimal deployable slice (`docker-compose.demo.yml`):
 auth + order + inventory + AI co-pilot with a small local LLM
-(`llama3.2:3b`) — see [DEPLOY.md](DEPLOY.md) for the deployment walkthrough.
-The full event-driven stack (Kafka, Oracle/SOAP billing, ChromaDB) lives in
-`docker-compose.yml` for local review.
+(`llama3.2:3b`) and the notification service powering the **Activity Feed**
+(`/feed`) — see [DEPLOY.md](DEPLOY.md) for the deployment walkthrough. The
+feed is seeded with demo events via REST (`seed-feed`), so it works without
+Kafka. The full event-driven stack (Kafka, Oracle/SOAP billing, ChromaDB)
+lives in `docker-compose.yml` for local review.
 
 ---
 
@@ -157,7 +159,7 @@ AtlasOps is an enterprise-grade operations platform that sits on top of **order 
 ### 🤖 AI Co-Pilot (RAG + MCP)
 - **Local LLM** via Ollama — no data leaves the network
 - **RAG** with ChromaDB vector store (free, open-source) + pgvector fallback
-- **MCP tool calling** — Order, Inventory, and Billing agents
+- **MCP tool calling** — Order, Inventory, Billing, and Activity (audit trail) agents
 - SSE streaming for real-time chat responses
 - Conversation memory in MongoDB
 
@@ -167,7 +169,7 @@ AtlasOps is an enterprise-grade operations platform that sits on top of **order 
 - Invoice/payment management with status tracking
 
 ### 🧪 Testing
-- **54 unit tests** across all 5 backend services
+- **83 unit tests** across all 6 backend services
 - JUnit 5 + Mockito + AssertJ
 - Spring Boot `@WebMvcTest` for controllers
 - Testcontainers for MongoDB & ChromaDB integration
@@ -220,9 +222,9 @@ cd AtlasOps-
 docker compose -f docker-compose.demo.yml up --build
 open http://localhost:8080
 ```
-This brings up Postgres, MongoDB, Ollama (`llama3.2:3b`), the four backend
-services, seed data, and the frontend — no local Java/Node needed. Deploy
-steps for Railway are in [DEPLOY.md](DEPLOY.md).
+This brings up Postgres, MongoDB, Ollama (`llama3.2:3b`), the five backend
+services, seed data (demo orders + feed events), and the frontend — no local
+Java/Node needed. Deploy steps for Railway are in [DEPLOY.md](DEPLOY.md).
 
 #### Full local development stack
 ```bash
@@ -264,6 +266,7 @@ atlasops-platform/
 │   ├── inventory-service/         # Catalog, stock (MongoDB + gRPC)
 │   ├── ai-copilot-service/        # AI co-pilot (LangChain4j, RAG, MCP)
 │   ├── billing-service/           # Legacy billing (Oracle + SOAP)
+│   ├── notification-service/      # Kafka consumer → activity timeline (MongoDB)
 │   └── proto/                     # Shared protobuf definitions
 ├── frontend/intellops-ui/         # Angular 17 SPA
 │   └── src/app/
@@ -303,12 +306,13 @@ cd backend && mvn verify
 
 | Service | Tests | Coverage Areas |
 |---------|-------|----------------|
-| **AI Co-Pilot** | 21 tests | ChatService, RagService, ConversationMemory, ChatController, AI Config |
+| **AI Co-Pilot** | 33 tests | ChatService, RagService, ConversationMemory, ChatController, CopilotController, AiCopilotService, ActivityTool, EvidenceCollector, AI Config |
 | **Auth** | 13 tests | AuthService, JwtTokenProvider, AuthController |
 | **Order** | 6 tests | OrderService |
 | **Inventory** | 7 tests | InventoryService, ProductCatalogController |
 | **Billing** | 7 tests | BillingService |
-| **Total** | **54 tests** | |
+| **Notification/Activity** | 17 tests | ActivityLogService, KafkaEventConsumer, ActivityLogController |
+| **Total** | **83 tests** | |
 
 ---
 
@@ -330,11 +334,19 @@ cd backend && mvn verify
 | `GET` | `/api/copilot/history/{id}` | Chat history |
 | `DELETE` | `/api/copilot/session/{id}` | Clear session |
 
+### Notification/Activity Service (port 8085)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/activity?entityId=&entityType=&eventType=&limit=` | Query the cross-service activity timeline |
+| `GET` | `/api/v1/activity/stats` | Activity log counts by entity type |
+| `POST` | `/api/v1/activity/events` | Manually publish a demo event into the feed (works without Kafka) |
+| gRPC | `NotificationService.GetActivityLog` | Internal activity timeline lookup (proto) |
+
 ---
 
 ## 🧠 Why AtlasOps Stands Out
 
-1. **Multi-service microservices** — 5 independent Spring Boot services with different databases and API styles
+1. **Multi-service microservices** — 6 independent Spring Boot services with different databases and API styles
 2. **AI with local LLM** — RAG, MCP tool calling, conversation memory (privacy-first)
 3. **Free vector database** — ChromaDB integration for production-grade RAG without paid services
 4. **Latest LangChain4j** — Uses LangChain4j 1.17.0 with the most recent AI capabilities
@@ -343,7 +355,7 @@ cd backend && mvn verify
 7. **Multi-API** — REST, GraphQL, gRPC, SOAP, SSE — all in one platform
 8. **Full auth** — JWT, bcrypt, role-based access
 9. **Modern frontend** — Angular 17, reactive forms, SSE streaming
-10. **Comprehensive tests** — 54 unit tests across all services
+10. **Comprehensive tests** — 83 unit tests across all services
 11. **Cloud-ready** — Docker Compose, CI/CD, AWS deploy guides
 12. **Enterprise UX** — Order forms, toast notifications, system health monitoring, responsive design
 

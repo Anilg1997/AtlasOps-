@@ -167,7 +167,9 @@ db.createCollection('conversations', {
 db.conversations.createIndex({ userId: 1 });
 db.conversations.createIndex({ updatedAt: -1 });
 
-// Activity / Audit Log
+// Notification / Activity Service — cross-service activity timeline
+db = db.getSiblingDB('intellops_notification');
+
 db.createCollection('activity_log', {
   validator: {
     $jsonSchema: {
@@ -186,6 +188,7 @@ db.createCollection('activity_log', {
 });
 
 db.activity_log.createIndex({ entityId: 1 });
+db.activity_log.createIndex({ entityType: 1 });
 db.activity_log.createIndex({ eventType: 1 });
 db.activity_log.createIndex({ timestamp: -1 });
 

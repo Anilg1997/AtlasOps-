@@ -1,18 +1,21 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CopilotService, Conversation } from '../../services/copilot.service';
+import { RouterLink } from '@angular/router';
+import { CopilotService, Conversation, ActivityEvidence } from '../../services/copilot.service';
+import { eventMeta as eventMetaFor, relativeTime as relativeTimeFor } from '../feed/activity-meta';
 
 interface ChatMsg {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  evidence?: ActivityEvidence[];
 }
 
 @Component({
   selector: 'app-chat',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="chat-layout animate-fadeIn">
       <div class="chat-sidebar">
@@ -50,6 +53,26 @@ interface ChatMsg {
             </div>
             <div class="message-content">
               <div class="message-text" [innerHTML]="formatMessage(msg.content)"></div>
+              <div class="evidence" *ngIf="msg.evidence && msg.evidence.length">
+                <div class="evidence-header">
+                  <span><i class="fas fa-stream"></i> Evidence · Activity feed</span>
+                  <a routerLink="/feed" class="evidence-open"><i class="fas fa-external-link-alt"></i> Open feed</a>
+                </div>
+                <div class="evidence-block" *ngFor="let ev of msg.evidence">
+                  <div class="evidence-block-title" *ngIf="ev.entityId">
+                    <span class="badge">{{ ev.entityType || 'ENTITY' }}</span>
+                    <span class="evidence-entity">{{ ev.entityId }}</span>
+                    <span class="evidence-count">{{ ev.events.length }} event(s)</span>
+                  </div>
+                  <div class="evidence-item" *ngFor="let event of ev.events">
+                    <span class="evidence-marker" [style.background]="eventMeta(event.eventType).bg" [style.color]="eventMeta(event.eventType).color">
+                      <i class="fas" [ngClass]="eventMeta(event.eventType).icon"></i>
+                    </span>
+                    <span class="evidence-label">{{ eventMeta(event.eventType).label }}</span>
+                    <span class="evidence-time">{{ relativeTime(event.timestamp) }}</span>
+                  </div>
+                </div>
+              </div>
               <span class="message-time">{{ msg.timestamp | date:'shortTime' }}</span>
             </div>
           </div>
@@ -109,6 +132,19 @@ interface ChatMsg {
     .message.user .message-avatar { background: var(--gray-200); color: var(--gray-600); }
     .message-content { padding: 0.75rem 1rem; }
     .message-text { font-size: 0.875rem; line-height: 1.6; white-space: pre-wrap; }
+    .evidence { margin-top: 0.75rem; background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 0.75rem; }
+    .evidence-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; font-weight: 600; color: var(--gray-600); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.5rem; }
+    .evidence-open { font-weight: 500; color: var(--primary); text-transform: none; letter-spacing: normal; }
+    .evidence-open:hover { text-decoration: underline; }
+    .evidence-block { border-top: 1px dashed var(--gray-200); padding-top: 0.5rem; margin-top: 0.5rem; }
+    .evidence-block:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+    .evidence-block-title { display: flex; align-items: center; gap: 0.375rem; margin-bottom: 0.375rem; font-size: 0.8125rem; }
+    .evidence-entity { font-weight: 600; color: var(--gray-800); }
+    .evidence-count { font-size: 0.6875rem; color: var(--gray-400); margin-left: auto; }
+    .evidence-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.8125rem; }
+    .evidence-marker { width: 1.375rem; height: 1.375rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.625rem; flex-shrink: 0; }
+    .evidence-label { font-weight: 500; color: var(--gray-700); }
+    .evidence-time { font-size: 0.6875rem; color: var(--gray-400); margin-left: auto; }
     .message-time { font-size: 0.75rem; color: var(--gray-400); margin-top: 0.25rem; display: block; }
     .typing-indicator { display: flex; gap: 4px; padding: 0.5rem 0;
       span { width: 8px; height: 8px; background: var(--gray-400); border-radius: 50%; animation: bounce 1.4s infinite;
@@ -159,7 +195,7 @@ export class ChatComponent implements OnInit {
     this.copilotService.chat(msg, this.activeConversationId || undefined).subscribe({
       next: (res) => {
         this.activeConversationId = res.conversationId;
-        this.messages.push({ role: 'assistant', content: res.response, timestamp: new Date() });
+        this.messages.push({ role: 'assistant', content: res.response, timestamp: new Date(), evidence: res.evidence });
         this.loading = false;
         this.scrollToBottom();
         this.copilotService.getConversations().subscribe(c => this.conversations = c);
@@ -181,7 +217,8 @@ export class ChatComponent implements OnInit {
     this.messages = (conv.messages || []).map(m => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
-      timestamp: new Date(m.timestamp)
+      timestamp: new Date(m.timestamp),
+      evidence: m.evidence
     }));
     this.scrollToBottom();
   }
@@ -189,6 +226,9 @@ export class ChatComponent implements OnInit {
   formatMessage(content: string): string {
     return content.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   }
+
+  eventMeta(eventType: string) { return eventMetaFor(eventType); }
+  relativeTime(iso: string) { return relativeTimeFor(iso); }
 
   private scrollToBottom() {
     setTimeout(() => {

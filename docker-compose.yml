@@ -152,6 +152,7 @@ services:
       SPRING_DATA_MONGODB_URI: mongodb://admin:Mongo%402024@mongodb:27017/intellops_copilot?authSource=admin
       INTELLOPS_AI_OLLAMA_BASE_URL: http://host.docker.internal:11434
       INTELLOPS_BILLING_BASE_URL: http://billing-service:8084
+      INTELLOPS_NOTIFICATION_BASE_URL: http://notification-service:8085
       SERVER_PORT: 8083
     ports:
       - "8083:8083"
@@ -175,6 +176,25 @@ services:
       SERVER_PORT: 8084
     ports:
       - "8084:8084"
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.notification
+    container_name: intellops-notification
+    depends_on:
+      kafka:
+        condition: service_started
+      mongodb:
+        condition: service_started
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://admin:Mongo%402024@mongodb:27017/intellops_notification?authSource=admin
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SERVER_PORT: 8085
+      GRPC_SERVER_PORT: 9093
+    ports:
+      - "8085:8085"
+      - "9093:9093"
 
   chromadb:
     image: chromadb/chroma:latest

@@ -49,6 +49,10 @@ export const routes: Routes = [
         loadComponent: () => import('./components/billing/billing.component').then(m => m.BillingComponent)
       },
       {
+        path: 'feed',
+        loadComponent: () => import('./components/feed/feed.component').then(m => m.FeedComponent)
+      },
+      {
         path: 'health',
         loadComponent: () => import('./components/health/health.component').then(m => m.HealthComponent)
       }

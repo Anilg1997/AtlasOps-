@@ -1,12 +1,15 @@
 # AtlasOps — Deployable demo slice
 #
-# Runs only the services needed for the AI co-pilot story:
-#   auth, order, inventory, ai-copilot + PostgreSQL, MongoDB, Ollama, seed-data, frontend
+# Runs only the services needed for the AI co-pilot + activity feed story:
+#   auth, order, inventory, ai-copilot, notification + PostgreSQL, MongoDB,
+#   Ollama, seed-data (orders + feed), frontend
 #
 # Excluded on purpose (kept in docker-compose.yml for full local review):
 #   Kafka, Oracle/SOAP billing, ChromaDB — they add deploy complexity without
 #   changing the demo. The Billing MCP tool degrades gracefully when the
 #   billing service is absent (see docs/decisions/005-failure-handling.md).
+#   The notification service runs without Kafka: the seed-feed container
+#   populates the activity timeline via REST (POST /api/v1/activity/events).
 #
 # Usage:
 #   docker compose -f docker-compose.demo.yml up --build
@@ -122,6 +125,7 @@ services:
       INTELLOPS_AI_OLLAMA_BASE_URL: http://ollama:11434
       INTELLOPS_AI_OLLAMA_MODEL: llama3.2:3b
       INTELLOPS_BILLING_BASE_URL: http://billing-service:8084
+      INTELLOPS_NOTIFICATION_BASE_URL: http://notification-service:8085
       SERVER_PORT: 8083
     depends_on:
       postgres:
@@ -140,6 +144,18 @@ services:
       - "8083:8083"
     restart: unless-stopped
 
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.notification
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://admin:Mongo%402024@mongodb:27017/intellops_notification?authSource=admin
+      SERVER_PORT: 8085
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
   seed-data:
     image: postgres:16-alpine
     environment:
@@ -152,6 +168,20 @@ services:
       postgres:
         condition: service_healthy
       order-service:
+        condition: service_started
+    restart: "no"
+
+  seed-feed:
+    # Curl image (alpine) — POSTs demo events to the notification service so
+    # the activity feed is populated without Kafka. See infra/demo/seed-feed.sh.
+    image: curlimages/curl:latest
+    volumes:
+      - ./infra/demo/seed-feed.sh:/seed-feed.sh:ro
+    entrypoint: ["/bin/sh", "/seed-feed.sh"]
+    environment:
+      FEED_BASE_URL: http://notification-service:8085
+    depends_on:
+      notification-service:
         condition: service_started
     restart: "no"
 
@@ -169,6 +199,8 @@ services:
       inventory-service:
         condition: service_started
       auth-service:
+        condition: service_started
+      notification-service:
         condition: service_started
     restart: unless-stopped
 

@@ -2,6 +2,8 @@ package com.intellops.copilot.service;
 
 import com.intellops.copilot.mongo.Conversation;
 import com.intellops.copilot.mongo.ConversationRepository;
+import com.intellops.copilot.model.EvidenceItem;
+import com.intellops.copilot.service.tools.ActivityTool;
 import com.intellops.copilot.service.tools.BillingTool;
 import com.intellops.copilot.service.tools.InventoryTool;
 import com.intellops.copilot.service.tools.OrderTool;
@@ -23,6 +25,7 @@ import reactor.core.publisher.Sinks;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -31,8 +34,10 @@ public class AiCopilotService {
     private final OrderTool orderTool;
     private final InventoryTool inventoryTool;
     private final BillingTool billingTool;
+    private final ActivityTool activityTool;
     private final RagService ragService;
     private final ConversationRepository conversationRepository;
+    private final EvidenceCollector evidenceCollector;
 
     @Value("${intellops.ai.ollama.base-url:http://localhost:11434}")
     private String ollamaBaseUrl;
@@ -47,13 +52,16 @@ public class AiCopilotService {
     private StreamingChatModel streamingChatModel;
 
     public AiCopilotService(OrderTool orderTool, InventoryTool inventoryTool,
-                             BillingTool billingTool, RagService ragService,
-                             ConversationRepository conversationRepository) {
+                             BillingTool billingTool, ActivityTool activityTool,
+                             RagService ragService, ConversationRepository conversationRepository,
+                             EvidenceCollector evidenceCollector) {
         this.orderTool = orderTool;
         this.inventoryTool = inventoryTool;
         this.billingTool = billingTool;
+        this.activityTool = activityTool;
         this.ragService = ragService;
         this.conversationRepository = conversationRepository;
+        this.evidenceCollector = evidenceCollector;
     }
 
     @PostConstruct
@@ -85,6 +93,7 @@ public class AiCopilotService {
             - OrderTool: Get order details, list orders, get order statistics
             - InventoryTool: Check stock, get product details, list products
             - BillingTool: Check invoice status, list overdue invoices
+            - ActivityTool: Query the activity timeline / audit trail for an order, invoice, or other entity
             
             When answering questions:
             1. Use the RAG context when available for documentation
@@ -110,12 +119,13 @@ public class AiCopilotService {
             if (chatModel != null) {
                 CopilotAssistant assistant = AiServices.builder(CopilotAssistant.class)
                         .chatModel(chatModel)
-                        .tools(orderTool, inventoryTool, billingTool)
+                        .tools(orderTool, inventoryTool, billingTool, activityTool)
                         .build();
 
                 String response = assistant.chat(fullPrompt);
                 saveMessage(conversationId, "user", message);
-                saveMessage(conversationId, "assistant", response);
+                // Persist tool evidence with the answer so it survives reloads.
+                saveMessage(conversationId, "assistant", response, evidenceCollector.getItems());
                 return response;
             }
 
@@ -201,13 +211,18 @@ public class AiCopilotService {
         }
     }
 
-    private void saveMessage(String conversationId, String role, String content) {
+    void saveMessage(String conversationId, String role, String content) {
+        saveMessage(conversationId, role, content, null);
+    }
+
+    void saveMessage(String conversationId, String role, String content, List<EvidenceItem> evidence) {
         if (conversationId == null) return;
 
         conversationRepository.findById(conversationId).ifPresent(conv -> {
             Conversation.Message msg = Conversation.Message.builder()
                     .role(role)
                     .content(content)
+                    .evidence(evidence)
                     .timestamp(LocalDateTime.now())
                     .build();
             conv.getMessages().add(msg);

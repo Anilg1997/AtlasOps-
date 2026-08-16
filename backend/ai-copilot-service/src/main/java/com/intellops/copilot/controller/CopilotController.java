@@ -3,6 +3,7 @@ package com.intellops.copilot.controller;
 import com.intellops.copilot.mongo.Conversation;
 import com.intellops.copilot.mongo.ConversationRepository;
 import com.intellops.copilot.service.AiCopilotService;
+import com.intellops.copilot.service.EvidenceCollector;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Flux;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,9 +25,10 @@ public class CopilotController {
 
     private final AiCopilotService copilotService;
     private final ConversationRepository conversationRepository;
+    private final EvidenceCollector evidenceCollector;
 
     @PostMapping("/chat")
-    public ResponseEntity<Map<String, String>> chat(@RequestBody Map<String, String> request) {
+    public ResponseEntity<Map<String, Object>> chat(@RequestBody Map<String, String> request) {
         String message = request.get("message");
         String conversationId = request.get("conversationId");
         String userId = request.getOrDefault("userId", "anonymous");
@@ -35,10 +38,15 @@ public class CopilotController {
         Conversation conversation = copilotService.getOrCreateConversation(conversationId, userId);
         String response = copilotService.chat(conversation.getId(), message);
 
-        return ResponseEntity.ok(Map.of(
-                "response", response,
-                "conversationId", conversation.getId()
-        ));
+        // Attach structured tool evidence (e.g. activity feed events) so the
+        // chat UI can render it under the answer.
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("response", response);
+        body.put("conversationId", conversation.getId());
+        if (!evidenceCollector.isEmpty()) {
+            body.put("evidence", evidenceCollector.getItems());
+        }
+        return ResponseEntity.ok(body);
     }
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

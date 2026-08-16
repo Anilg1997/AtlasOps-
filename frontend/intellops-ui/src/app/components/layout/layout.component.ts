@@ -31,6 +31,9 @@ import { AuthService } from '../../services/auth.service';
           <a routerLink="/billing" routerLinkActive="active">
             <i class="fas fa-file-invoice-dollar"></i> Billing
           </a>
+          <a routerLink="/feed" routerLinkActive="active">
+            <i class="fas fa-stream"></i> Activity Feed
+          </a>
           <a routerLink="/health" routerLinkActive="active">
             <i class="fas fa-heartbeat"></i> Health
           </a>

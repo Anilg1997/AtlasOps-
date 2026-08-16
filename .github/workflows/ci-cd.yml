@@ -62,7 +62,7 @@ jobs:
         run: mvn clean compile -DskipTests
 
       - name: Run Unit Tests
-        run: mvn test -pl backend/auth-service,backend/order-service
+        run: mvn test -pl backend/auth-service,backend/order-service,backend/notification-service
 
       - name: Package Services
         run: mvn package -DskipTests -q
@@ -83,10 +83,19 @@ jobs:
         run: docker build -f Dockerfile.auth -t intellops-auth:${{ github.sha }} .
 
       - name: Build Order Service Image
-        run: docker build -f Dockerfile.billing -t intellops-billing:${{ github.sha }} .
+        run: docker build -f Dockerfile.order -t intellops-order:${{ github.sha }} .
 
       - name: Build Inventory Service Image
         run: docker build -f Dockerfile.inventory -t intellops-inventory:${{ github.sha }} .
+
+      - name: Build AI Co-Pilot Service Image
+        run: docker build -f Dockerfile.copilot -t intellops-copilot:${{ github.sha }} .
+
+      - name: Build Billing Service Image
+        run: docker build -f Dockerfile.billing -t intellops-billing:${{ github.sha }} .
+
+      - name: Build Notification Service Image
+        run: docker build -f Dockerfile.notification -t intellops-notification:${{ github.sha }} .
 
   deploy-preview:
     name: Deploy Preview

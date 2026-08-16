@@ -69,6 +69,7 @@ required**. For reference, the ones that matter:
 | `INTELLOPS_AI_OLLAMA_MODEL` | ai-copilot-service | `llama3.2:3b` | Small/fast demo model. Full-stack local use keeps `llama3.1`. |
 | `INTELLOPS_AI_OLLAMA_BASE_URL` | ai-copilot-service | `http://ollama:11434` | Internal DNS name of the Ollama container. |
 | `INTELLOPS_BILLING_BASE_URL` | ai-copilot-service | `http://billing-service:8084` | Billing is **not** deployed in the demo, so the Billing tool gracefully reports "unavailable" instead of failing the whole answer. |
+| `INTELLOPS_NOTIFICATION_BASE_URL` | ai-copilot-service | `http://notification-service:8085` | Points at the activity timeline service. Deployed in the demo without Kafka — the `seed-feed` container populates the feed via `POST /api/v1/activity/events` (see `infra/demo/seed-feed.sh`). |
 | `SPRING_DATASOURCE_URL` / `SPRING_DATA_MONGODB_URI` | services | internal container names | Change only if you point at managed databases. |
 | `JWT_SECRET`-style keys | auth-service | baked into `application.yml` | Rotate before any real production use (out of demo scope). |
 
@@ -83,9 +84,12 @@ required**. For reference, the ones that matter:
 4. `seed-data` waits for the `orders` table, then loads demo orders
    (ORD-1001…1006), line items, and 3 demo runbook/FAQ docs into the vector
    store. Idempotent — safe on every restart.
-5. `ollama` pulls `llama3.2:3b` + `nomic-embed-text` on first boot (cached in
+5. `notification-service` boots against MongoDB, then `seed-feed` POSTs demo
+   events into the activity timeline via REST (no Kafka needed in the demo).
+   Idempotent — skips when the feed already has entries.
+6. `ollama` pulls `llama3.2:3b` + `nomic-embed-text` on first boot (cached in
    its volume afterwards).
-6. `frontend` (nginx) serves the Angular app and proxies `/api/*` to the
+7. `frontend` (nginx) serves the Angular app and proxies `/api/*` to the
    services. `GET /health` on the frontend always returns `200` so platform
    health checks never kill the container mid-demo.
 

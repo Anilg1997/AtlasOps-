@@ -1,17 +1,36 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { ActivityEntry } from './activity.service';
 
 export interface ChatMessage {
   response: string;
   conversationId: string;
+  /** Structured tool evidence (e.g. activity feed events) backing the answer. */
+  evidence?: ActivityEvidence[];
+}
+
+export interface ActivityEvidence {
+  tool: string;
+  method: string;
+  entityType: string | null;
+  entityId: string | null;
+  events: ActivityEntry[];
+}
+
+export interface ConversationMessage {
+  role: string;
+  content: string;
+  timestamp: string;
+  /** Tool evidence persisted with the answer, survives reloads. */
+  evidence?: ActivityEvidence[];
 }
 
 export interface Conversation {
   id: string;
   userId: string;
   title: string;
-  messages: { role: string; content: string; timestamp: string }[];
+  messages: ConversationMessage[];
   createdAt: string;
   updatedAt: string;
 }

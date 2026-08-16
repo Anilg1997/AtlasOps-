@@ -25,6 +25,7 @@
         <module>backend/inventory-service</module>
         <module>backend/ai-copilot-service</module>
         <module>backend/billing-service</module>
+        <module>backend/notification-service</module>
     </modules>
 
     <properties>

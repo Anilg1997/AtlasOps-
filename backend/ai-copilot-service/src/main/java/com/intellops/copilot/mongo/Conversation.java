@@ -1,5 +1,6 @@
 package com.intellops.copilot.mongo;
 
+import com.intellops.copilot.model.EvidenceItem;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -42,6 +43,8 @@ public class Conversation {
         private String content;
         private List<ToolCall> toolCalls;
         private String toolResult;
+        /** Tool evidence (e.g. activity feed events) backing this answer. */
+        private List<EvidenceItem> evidence;
         private LocalDateTime timestamp;
     }
 

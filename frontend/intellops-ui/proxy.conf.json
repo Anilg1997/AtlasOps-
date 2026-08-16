@@ -19,6 +19,11 @@
     "secure": false,
     "changeOrigin": true
   },
+  "/api/v1/activity": {
+    "target": "http://localhost:8085",
+    "secure": false,
+    "changeOrigin": true
+  },
   "/graphql": {
     "target": "http://localhost:8081",
     "secure": false,

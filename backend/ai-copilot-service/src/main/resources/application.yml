@@ -36,6 +36,7 @@ intellops:
       order-service-url: http://localhost:8081
       inventory-service-url: http://localhost:8082
       billing-service-url: http://localhost:8084
+      notification-service-url: http://localhost:8085
     rag:
       enabled: true
       store: pgvector
@@ -45,6 +46,8 @@ intellops:
         base-url: http://localhost:8000
         collection: atlasops_embeddings
       embedding-model: nomic-embed-text
+  notification:
+    base-url: http://localhost:8085
 
 management:
   endpoints:

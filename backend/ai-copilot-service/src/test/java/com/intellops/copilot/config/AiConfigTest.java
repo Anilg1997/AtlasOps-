@@ -1,5 +1,6 @@
 package com.intellops.copilot.config;
 
+import com.intellops.copilot.service.tools.ActivityTool;
 import com.intellops.copilot.service.tools.BillingTool;
 import com.intellops.copilot.service.tools.InventoryTool;
 import com.intellops.copilot.service.tools.OrderTool;
@@ -28,6 +29,8 @@ class AiConfigTest {
     private InventoryTool inventoryTool;
     @MockBean
     private BillingTool billingTool;
+    @MockBean
+    private ActivityTool activityTool;
 
     @Autowired
     private ChatModel chatModel;

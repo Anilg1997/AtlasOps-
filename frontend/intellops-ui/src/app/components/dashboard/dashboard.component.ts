@@ -2,11 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { OrderService } from '../../services/order.service';
+import { RecentActivityComponent } from '../feed/recent-activity.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, RecentActivityComponent],
   template: `
     <div class="dashboard animate-fadeIn">
       <div class="page-header">
@@ -85,6 +86,10 @@ import { OrderService } from '../../services/order.service';
             <i class="fas fa-robot"></i> Ask AI Co-Pilot
           </a>
         </div>
+      </div>
+
+      <div class="card" style="margin-top: 1.5rem;">
+        <app-recent-activity></app-recent-activity>
       </div>
     </div>
   `,
