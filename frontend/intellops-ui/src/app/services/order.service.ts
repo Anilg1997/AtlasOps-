@@ -7,6 +7,7 @@ export interface Order {
   orderNumber: string;
   customer: CustomerDto;
   status: string;
+  statusReason?: string;
   totalAmount: number;
   taxAmount: number;
   notes: string;

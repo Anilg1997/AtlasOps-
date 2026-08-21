@@ -55,6 +55,19 @@ export const routes: Routes = [
       {
         path: 'health',
         loadComponent: () => import('./components/health/health.component').then(m => m.HealthComponent)
+      },
+      {
+        path: 'admin/users',
+        loadComponent: () => import('./components/admin/admin-users.component').then(m => m.AdminUsersComponent)
+      },
+      {
+        path: 'admin/settings',
+        loadComponent: () => import('./components/admin/admin-settings.component').then(m => m.AdminSettingsComponent)
+      },
+      {
+        path: 'admin',
+        redirectTo: 'admin/users',
+        pathMatch: 'full'
       }
     ]
   },
