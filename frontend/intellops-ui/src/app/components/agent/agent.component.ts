@@ -369,14 +369,15 @@ export class AgentComponent implements AfterViewChecked {
   }
 
   getPlaceholder(): string {
-    const phase = this.agentService.state().phase;
-    switch (phase) {
-      case 'greeting': return 'Tell me what you want to buy...';
-      case 'collecting': return 'Type your answer...';
-      case 'recommending': return 'Type a command (add, checkout, more)...';
-      case 'cart': return 'Type checkout or add more...';
-      default: return 'Type a message...';
-    }
+    const msgCount = this.agentService.messages().length;
+    if (msgCount === 0) return 'Tell me what you want to buy...';
+    const lastAgent = [...this.agentService.messages()].reverse().find(m => m.role === 'agent');
+    if (!lastAgent) return 'Type a message...';
+    const content = lastAgent.content.toLowerCase();
+    if (content.includes('budget')) return 'Enter your budget (e.g., $100)...';
+    if (content.includes('brand')) return 'Enter brand or "any"...';
+    if (content.includes('add') || content.includes('recommendation')) return 'Type add 1, add all, checkout...';
+    return 'Type a message...';
   }
 
   private scrollToBottom() {

@@ -101,6 +101,10 @@ export class ProductService {
     return this.http.delete(`${API}/products/${id}`);
   }
 
+  addReview(productId: number, review: { rating: number; comment: string; reviewerName: string }): Observable<any> {
+    return this.http.post(`${API}/products/${productId}/reviews`, review);
+  }
+
   /** Helper: compute discounted price */
   static discountedPrice(product: Product): number {
     return +(product.price * (1 - product.discountPercentage / 100)).toFixed(2);

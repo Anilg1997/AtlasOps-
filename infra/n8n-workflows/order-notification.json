@@ -1,0 +1,84 @@
+{
+  "name": "ShopHub Order Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-events",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Order Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.status}}",
+              "operation": "equals",
+              "value2": "CONFIRMED"
+            }
+          ]
+        }
+      },
+      "id": "if-1",
+      "name": "Is Order Confirmed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.callbackUrl}}",
+        "method": "POST",
+        "body": {
+          "type": "order_confirmed",
+          "orderId": "={{$json.orderId}}",
+          "orderNumber": "={{$json.orderNumber}}",
+          "totalAmount": "={{$json.totalAmount}}",
+          "timestamp": "={{$now.toISO()}}"
+        },
+        "options": {}
+      },
+      "id": "http-1",
+      "name": "Send Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [650, 250]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.callbackUrl}}",
+        "method": "POST",
+        "body": {
+          "type": "order_status_update",
+          "orderId": "={{$json.orderId}}",
+          "status": "={{$json.status}}",
+          "timestamp": "={{$now.toISO()}}"
+        },
+        "options": {}
+      },
+      "id": "http-2",
+      "name": "Send Status Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [650, 400]
+    }
+  ],
+  "connections": {
+    "Order Event Webhook": {
+      "main": [[{"node": "Is Order Confirmed?", "type": "main", "index": 0}]]
+    },
+    "Is Order Confirmed?": {
+      "main": [
+        [{"node": "Send Confirmation", "type": "main", "index": 0}],
+        [{"node": "Send Status Update", "type": "main", "index": 0}]
+      ]
+    }
+  }
+}

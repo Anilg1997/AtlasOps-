@@ -1,14 +1,16 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ProductService, Product } from '../../services/product.service';
+import { FormsModule } from '@angular/forms';
+import { ProductService, Product, Review } from '../../services/product.service';
 import { CartService } from '../../services/cart.service';
 import { WishlistService } from '../../services/wishlist.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule],
   template: `
     <div class="product-detail animate-fadeIn" *ngIf="product() as p">
       <!-- Breadcrumb -->
@@ -140,12 +142,13 @@ import { WishlistService } from '../../services/wishlist.service';
           </div>
         </div>
         <div class="reviews-list">
-          <div class="review-card" *ngFor="let review of p.reviews">
+          <div class="review-card" *ngFor="let review of getAllReviews(p)">
             <div class="review-header">
               <div class="reviewer-avatar">{{ review.reviewerName.charAt(0) }}</div>
               <div class="reviewer-info">
                 <strong>{{ review.reviewerName }}</strong>
                 <span class="review-date">{{ review.date | date:'MMM d, yyyy' }}</span>
+                <span class="new-badge" *ngIf="review.isNew">New</span>
               </div>
               <div class="review-stars">
                 <i *ngFor="let s of getStars(review.rating)" class="fas"
@@ -153,6 +156,49 @@ import { WishlistService } from '../../services/wishlist.service';
               </div>
             </div>
             <p class="review-comment">{{ review.comment }}</p>
+          </div>
+        </div>
+
+        <!-- Write a Review -->
+        <div class="write-review">
+          <h3><i class="fas fa-pen"></i> Write a Review</h3>
+          <div class="review-form" *ngIf="!reviewSubmitted()">
+            <div class="form-group">
+              <label>Your Rating</label>
+              <div class="star-selector">
+                <button *ngFor="let star of [1,2,3,4,5]" type="button" class="star-btn"
+                        [class.active]="reviewRating() >= star"
+                        (click)="reviewRating.set(star)">
+                  <i class="fas fa-star"></i>
+                </button>
+                <span class="rating-label" *ngIf="reviewRating() > 0">{{ getRatingLabel(reviewRating()) }}</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Your Review</label>
+              <textarea class="form-control" [(ngModel)]="reviewComment" name="comment"
+                        placeholder="Share your experience with this product..." rows="4"></textarea>
+            </div>
+            <div class="review-actions">
+              <button class="btn btn-primary" (click)="submitReview(p)"
+                      [disabled]="reviewRating() === 0 || !reviewComment.trim() || reviewSubmitting()">
+                <span *ngIf="!reviewSubmitting()"><i class="fas fa-paper-plane"></i> Submit Review</span>
+                <span *ngIf="reviewSubmitting()" class="loading-state">
+                  <div class="spinner" style="width:16px;height:16px;border-width:2px;"></div> Submitting...
+                </span>
+              </button>
+            </div>
+            <div class="review-error" *ngIf="reviewError()">
+              <i class="fas fa-exclamation-circle"></i> {{ reviewError() }}
+            </div>
+          </div>
+          <div class="review-success" *ngIf="reviewSubmitted()">
+            <i class="fas fa-check-circle"></i>
+            <h4>Thank you for your review!</h4>
+            <p>Your review has been submitted successfully.</p>
+            <button class="btn btn-secondary" (click)="resetReviewForm()">
+              <i class="fas fa-plus"></i> Write Another Review
+            </button>
           </div>
         </div>
       </div>
@@ -324,8 +370,47 @@ import { WishlistService } from '../../services/wishlist.service';
     .review-stars i { font-size: 0.75rem; color: #f59e0b; }
     .review-stars .empty-star { color: var(--gray-300); }
     .review-comment { font-size: 0.875rem; color: var(--gray-600); line-height: 1.6; }
+    .new-badge {
+      display: inline-block; padding: 0.125rem 0.5rem; background: var(--primary-50); color: var(--primary);
+      border-radius: 6px; font-size: 0.6875rem; font-weight: 600; margin-left: 0.5rem;
+    }
 
-    .loading-state { text-align: center; padding: 4rem 1rem; color: var(--gray-400); display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+    /* Write Review */
+    .write-review {
+      margin-top: 2rem; padding: 1.5rem; background: white; border-radius: 16px;
+      box-shadow: var(--shadow); border: 1px solid var(--gray-100);
+      h3 { font-size: 1.125rem; font-weight: 700; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem;
+        i { color: var(--primary); } }
+    }
+    .review-form .form-group { margin-bottom: 1rem;
+      label { display: block; font-size: 0.8125rem; font-weight: 600; color: var(--gray-700); margin-bottom: 0.375rem; }
+    }
+    .star-selector { display: flex; align-items: center; gap: 0.375rem; }
+    .star-btn {
+      background: none; border: none; cursor: pointer; padding: 0.25rem; font-size: 1.25rem;
+      color: var(--gray-300); transition: all 0.15s;
+      &:hover { transform: scale(1.2); }
+      &.active { color: #f59e0b; }
+    }
+    .rating-label {
+      margin-left: 0.75rem; font-size: 0.875rem; font-weight: 600; color: var(--gray-700);
+    }
+    .review-form textarea.form-control {
+      resize: vertical; min-height: 100px; font-size: 0.9375rem; line-height: 1.6;
+    }
+    .review-actions { display: flex; gap: 0.75rem; }
+    .review-error {
+      display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;
+      padding: 0.75rem 1rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px;
+      color: #dc2626; font-size: 0.8125rem;
+    }
+    .review-success {
+      text-align: center; padding: 2rem;
+      i { font-size: 3rem; color: var(--success); margin-bottom: 1rem; }
+      h4 { font-size: 1.125rem; color: var(--gray-900); margin-bottom: 0.25rem; }
+      p { color: var(--gray-500); font-size: 0.875rem; margin-bottom: 1.25rem; }
+    }
+    .loading-state { display: flex; align-items: center; gap: 0.5rem; }
   `]
 })
 export class ProductDetailComponent implements OnInit {
@@ -333,13 +418,20 @@ export class ProductDetailComponent implements OnInit {
   selectedImage = signal<string>('');
   quantity = signal(1);
   loading = signal(false);
+  reviewRating = signal(0);
+  reviewComment = '';
+  reviewSubmitting = signal(false);
+  reviewSubmitted = signal(false);
+  reviewError = signal('');
+  localReviews = signal<Review[]>([]);
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private productService: ProductService,
     private cartService: CartService,
-    public wishlistService: WishlistService
+    public wishlistService: WishlistService,
+    public authService: AuthService
   ) {}
 
   ngOnInit() {
@@ -369,6 +461,59 @@ export class ProductDetailComponent implements OnInit {
 
   toggleWishlist(product: Product) {
     this.wishlistService.toggle(product);
+  }
+
+  getAllReviews(p: Product): (Review & { isNew?: boolean })[] {
+    const local = this.localReviews().map(r => ({ ...r, isNew: true }));
+    return [...local, ...p.reviews];
+  }
+
+  getRatingLabel(rating: number): string {
+    const labels = ['', 'Terrible', 'Poor', 'Average', 'Good', 'Excellent'];
+    return labels[rating] || '';
+  }
+
+  submitReview(product: Product) {
+    if (this.reviewRating() === 0 || !this.reviewComment.trim()) return;
+    this.reviewSubmitting.set(true);
+    this.reviewError.set('');
+
+    const reviewerName = this.authService.user()
+      ? `${this.authService.user()!.firstName} ${this.authService.user()!.lastName}`
+      : 'Anonymous User';
+
+    this.productService.addReview(product.id, {
+      rating: this.reviewRating(),
+      comment: this.reviewComment.trim(),
+      reviewerName
+    }).subscribe({
+      next: (res) => {
+        // DummyJSON simulates the review — add it locally
+        const newReview: Review = {
+          rating: this.reviewRating(),
+          comment: this.reviewComment.trim(),
+          date: new Date().toISOString(),
+          reviewerName,
+          reviewerEmail: this.authService.user()?.email || 'user@example.com'
+        };
+        this.localReviews.update(reviews => [newReview, ...reviews]);
+        this.reviewSubmitting.set(false);
+        this.reviewSubmitted.set(true);
+        this.reviewRating.set(0);
+        this.reviewComment = '';
+      },
+      error: (err) => {
+        this.reviewSubmitting.set(false);
+        this.reviewError.set(err.error?.message || 'Failed to submit review. Please try again.');
+      }
+    });
+  }
+
+  resetReviewForm() {
+    this.reviewSubmitted.set(false);
+    this.reviewRating.set(0);
+    this.reviewComment = '';
+    this.reviewError.set('');
   }
 
   addToCart(product: Product) {

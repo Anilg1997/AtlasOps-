@@ -1,0 +1,83 @@
+{
+  "name": "ShopHub Product Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "hours", "hoursInterval": 6}]
+        }
+      },
+      "id": "cron-1",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://dummyjson.com/products?limit=194",
+        "method": "GET",
+        "options": {}
+      },
+      "id": "http-1",
+      "name": "Fetch Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "split-1",
+      "name": "Split Products",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://product-service:8082/api/v1/products/sync",
+        "method": "POST",
+        "body": "={{$json}}",
+        "options": {}
+      },
+      "id": "http-2",
+      "name": "Sync to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://agent-service:8084/api/v1/agent/embed",
+        "method": "POST",
+        "body": {
+          "productId": "={{$json.id}}",
+          "text": "={{$json.title}} {{$json.description}} {{$json.category}} {{$json.brand}}"
+        },
+        "options": {}
+      },
+      "id": "http-3",
+      "name": "Generate Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [[{"node": "Fetch Products", "type": "main", "index": 0}]]
+    },
+    "Fetch Products": {
+      "main": [[{"node": "Split Products", "type": "main", "index": 0}]]
+    },
+    "Split Products": {
+      "main": [[{"node": "Sync to Backend", "type": "main", "index": 0}]]
+    },
+    "Sync to Backend": {
+      "main": [[{"node": "Generate Embeddings", "type": "main", "index": 0}]]
+    }
+  }
+}

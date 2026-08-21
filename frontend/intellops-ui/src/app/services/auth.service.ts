@@ -1,9 +1,9 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, of, switchMap, catchError } from 'rxjs';
 
-const API = 'https://dummyjson.com';
+const API = '/api/v1';
 
 export interface AuthUser {
   id: number;
@@ -47,22 +47,27 @@ export class AuthService {
   }
 
   login(username: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${API}/auth/login`, {
-      username,
-      password,
-      expiresInMins: 60
-    }).pipe(tap(res => this.handleAuth(res)));
+    // Try backend first, fall back to DummyJSON
+    return this.http.post<AuthResponse>(`${API}/auth/login`, { username, password }).pipe(
+      tap(res => this.handleAuth(res)),
+      catchError(() => {
+        // Fallback to DummyJSON API
+        return this.http.post<AuthResponse>('https://dummyjson.com/auth/login', {
+          username, password, expiresInMins: 60
+        }).pipe(tap(res => this.handleAuth(res)));
+      })
+    );
   }
 
   register(data: { username: string; password: string; email: string; firstName: string; lastName: string }): Observable<AuthResponse> {
-    // DummyJSON doesn't have a real register endpoint, so we use auth/add
-    // but for demo we'll simulate by logging in with a default user
-    // In production this would hit a real registration endpoint
-    return this.http.post<AuthResponse>(`${API}/auth/login`, {
-      username: data.username,
-      password: data.password,
-      expiresInMins: 60
-    }).pipe(tap(res => this.handleAuth({ ...res, firstName: data.firstName, lastName: data.lastName })));
+    return this.http.post<AuthResponse>(`${API}/auth/register`, data).pipe(
+      tap(res => this.handleAuth(res)),
+      catchError(() => {
+        return this.http.post<AuthResponse>('https://dummyjson.com/auth/login', {
+          username: data.username, password: data.password, expiresInMins: 60
+        }).pipe(tap(res => this.handleAuth({ ...res, firstName: data.firstName, lastName: data.lastName })));
+      })
+    );
   }
 
   getProfile(): Observable<AuthUser> {
@@ -89,7 +94,6 @@ export class AuthService {
   private handleAuth(res: AuthResponse): void {
     localStorage.setItem('shop_token', res.accessToken);
     localStorage.setItem('shop_refresh', res.refreshToken);
-    // DummyJSON doesn't return role, so we derive from email/username
     const userWithRole = { ...res, role: res.username === 'admin' || res.email?.includes('admin') ? 'admin' : 'user' };
     localStorage.setItem('shop_user', JSON.stringify(userWithRole));
     this.currentUser.set(userWithRole);

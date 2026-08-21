@@ -1,0 +1,77 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: agent-service
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/shophub}
+    username: ${SPRING_DATASOURCE_USERNAME:shophub}
+    password: ${SPRING_DATASOURCE_PASSWORD:shophub_secret}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+# Ollama LLM Configuration
+ollama:
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:llama3.2}
+  temperature: 0.7
+  timeout: 120s
+
+# Kafka
+kafka:
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+  topics:
+    order-created: order.created
+    order-updated: order.updated
+    agent-events: agent.events
+    product-sync: product.sync
+
+# Service URLs
+services:
+  product-url: ${PRODUCT_SERVICE_URL:http://localhost:8082}
+  order-url: ${ORDER_SERVICE_URL:http://localhost:8083}
+  auth-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+
+# RAG Configuration
+rag:
+  enabled: true
+  chunk-size: 512
+  chunk-overlap: 50
+  top-k: 5
+  min-score: 0.7
+
+# MCP (Model Context Protocol)
+mcp:
+  enabled: true
+  server-name: shophub-agent
+  server-version: 1.0.0
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.shophub.agent: DEBUG
+    dev.langchain4j: INFO
