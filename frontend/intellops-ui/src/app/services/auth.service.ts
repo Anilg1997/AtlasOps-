@@ -3,27 +3,27 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 
-export interface User {
+const API = 'https://dummyjson.com';
+
+export interface AuthUser {
   id: number;
+  username: string;
   email: string;
   firstName: string;
   lastName: string;
-  fullName: string;
-  role: string;
+  gender: string;
+  image: string;
+  role?: string;
 }
 
-export interface AuthResponse {
-  token: string;
+export interface AuthResponse extends AuthUser {
+  accessToken: string;
   refreshToken: string;
-  tokenType: string;
-  expiresIn: number;
-  user: User;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly API_URL = '/api/auth';
-  private currentUser = signal<User | null>(null);
+  private currentUser = signal<AuthUser | null>(null);
 
   user = this.currentUser.asReadonly();
   isAuthenticated = computed(() => !!this.getToken());
@@ -33,50 +33,65 @@ export class AuthService {
   }
 
   private loadStoredUser(): void {
-    const userJson = localStorage.getItem('intellops_user');
-    if (userJson) {
-      try {
+    try {
+      const userJson = localStorage.getItem('shop_user');
+      const token = localStorage.getItem('shop_token');
+      if (userJson && token) {
         this.currentUser.set(JSON.parse(userJson));
-      } catch {
-        localStorage.removeItem('intellops_user');
       }
-    }
+    } catch { localStorage.clear(); }
   }
 
   getToken(): string | null {
-    return localStorage.getItem('intellops_token');
+    return localStorage.getItem('shop_token');
   }
 
-  login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_URL}/login`, { email, password })
-      .pipe(tap(res => this.handleAuthResponse(res)));
+  login(username: string, password: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${API}/auth/login`, {
+      username,
+      password,
+      expiresInMins: 60
+    }).pipe(tap(res => this.handleAuth(res)));
   }
 
-  register(data: { email: string; password: string; firstName: string; lastName: string }): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_URL}/register`, data)
-      .pipe(tap(res => this.handleAuthResponse(res)));
+  register(data: { username: string; password: string; email: string; firstName: string; lastName: string }): Observable<AuthResponse> {
+    // DummyJSON doesn't have a real register endpoint, so we use auth/add
+    // but for demo we'll simulate by logging in with a default user
+    // In production this would hit a real registration endpoint
+    return this.http.post<AuthResponse>(`${API}/auth/login`, {
+      username: data.username,
+      password: data.password,
+      expiresInMins: 60
+    }).pipe(tap(res => this.handleAuth({ ...res, firstName: data.firstName, lastName: data.lastName })));
+  }
+
+  getProfile(): Observable<AuthUser> {
+    return this.http.get<AuthUser>(`${API}/auth/me`, {
+      headers: { Authorization: `Bearer ${this.getToken()}` }
+    }).pipe(tap(user => {
+      this.currentUser.set(user);
+      localStorage.setItem('shop_user', JSON.stringify(user));
+    }));
   }
 
   logout(): void {
-    localStorage.removeItem('intellops_token');
-    localStorage.removeItem('intellops_refresh_token');
-    localStorage.removeItem('intellops_user');
+    localStorage.removeItem('shop_token');
+    localStorage.removeItem('shop_refresh');
+    localStorage.removeItem('shop_user');
     this.currentUser.set(null);
     this.router.navigate(['/login']);
   }
 
-  getProfile(): Observable<User> {
-    return this.http.get<User>(`${this.API_URL}/me`)
-      .pipe(tap(user => {
-        this.currentUser.set(user);
-        localStorage.setItem('intellops_user', JSON.stringify(user));
-      }));
+  isAdmin(): boolean {
+    return this.currentUser()?.role === 'admin';
   }
 
-  private handleAuthResponse(res: AuthResponse): void {
-    localStorage.setItem('intellops_token', res.token);
-    localStorage.setItem('intellops_refresh_token', res.refreshToken);
-    localStorage.setItem('intellops_user', JSON.stringify(res.user));
-    this.currentUser.set(res.user);
+  private handleAuth(res: AuthResponse): void {
+    localStorage.setItem('shop_token', res.accessToken);
+    localStorage.setItem('shop_refresh', res.refreshToken);
+    // DummyJSON doesn't return role, so we derive from email/username
+    const userWithRole = { ...res, role: res.username === 'admin' || res.email?.includes('admin') ? 'admin' : 'user' };
+    localStorage.setItem('shop_user', JSON.stringify(userWithRole));
+    this.currentUser.set(userWithRole);
   }
 }

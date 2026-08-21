@@ -1,16 +1,12 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { ToastContainerComponent } from './components/notifications/toast-container.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, ToastContainerComponent],
-  template: `
-    <router-outlet></router-outlet>
-    <app-toast-container></app-toast-container>
-  `
+  imports: [RouterOutlet],
+  template: `<router-outlet></router-outlet>`
 })
 export class AppComponent {
-  title = 'IntelliOps';
+  title = 'ShopHub';
 }
