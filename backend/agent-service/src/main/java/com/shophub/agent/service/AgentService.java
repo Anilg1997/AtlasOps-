@@ -8,10 +8,14 @@ import com.shophub.agent.repository.ConversationRepository;
 import com.shophub.agent.repository.MessageRepository;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.ollama.OllamaChatModel;
+import dev.langchain4j.model.chat.StreamingChatLanguageModel;
+import dev.langchain4j.model.StreamingResponseHandler;
 import dev.langchain4j.model.output.Response;
+import dev.langchain4j.model.ollama.OllamaChatModel;
+import dev.langchain4j.model.ollama.OllamaStreamingChatModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.shophub.agent.websocket.AgentWebSocketHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -56,12 +60,19 @@ public class AgentService {
     private String ollamaModel;
 
     private ChatLanguageModel chatModel;
+    private StreamingChatLanguageModel streamingChatModel;
     private boolean llmAvailable = false;
 
     @PostConstruct
     public void init() {
         try {
             chatModel = OllamaChatModel.builder()
+                .baseUrl(ollamaBaseUrl)
+                .modelName(ollamaModel)
+                .temperature(0.7)
+                .timeout(Duration.ofSeconds(120))
+                .build();
+            streamingChatModel = OllamaStreamingChatModel.builder()
                 .baseUrl(ollamaBaseUrl)
                 .modelName(ollamaModel)
                 .temperature(0.7)
@@ -130,6 +141,130 @@ public class AgentService {
         result.put("intent", intent.name());
         result.put("tools", toolResults);
         return result;
+    }
+
+    /**
+     * Process a user message with streaming response via WebSocket
+     */
+    public void processMessageStreaming(Long conversationId, Long userId, String userMessage,
+                                        AgentWebSocketHandler.AgentStreamingCallback callback) {
+        log.info("🤖 Processing streaming message for user {}: {}", userId, userMessage);
+
+        // 1. Ensure conversation exists
+        Conversation conversation = getOrCreateConversation(conversationId, userId, userMessage);
+
+        // 2. Save user message
+        Message userMsg = Message.builder()
+            .conversation(conversation)
+            .role(Message.MessageRole.USER)
+            .content(userMessage)
+            .build();
+        messageRepo.save(userMsg);
+
+        // 3. Detect intent
+        AgentIntent intent = detectIntent(userMessage);
+
+        // 4. Gather context via RAG
+        String ragContext = gatherRagContext(userMessage, intent);
+
+        // 5. Build system prompt with MCP tools and RAG context
+        String systemPrompt = buildSystemPrompt(ragContext, intent);
+
+        // 6. Generate streaming response
+        if (llmAvailable && streamingChatModel != null) {
+            generateStreamingLlmResponse(conversation.getId(), systemPrompt, userMessage, callback);
+        } else {
+            // Fallback to synchronous for rule-based responses
+            List<Map<String, Object>> toolResults = new ArrayList<>();
+            String agentResponse = generateRuleBasedResponse(userMessage, intent, toolResults);
+            
+            // Send as single token for consistency
+            callback.onToken(agentResponse);
+            
+            // Save agent message
+            Message agentMsg = Message.builder()
+                .conversation(conversation)
+                .role(Message.MessageRole.AGENT)
+                .content(agentResponse)
+                .metadata(objectMapper.valueToTree(Map.of("intent", intent.name(), "tools", toolResults)).toString())
+                .build();
+            messageRepo.save(agentMsg);
+
+            // Publish Kafka event
+            publishAgentEvent(userId, intent, userMessage, agentResponse);
+
+            callback.onComplete(Map.of(
+                "conversationId", conversation.getId(),
+                "intent", intent.name(),
+                "tools", toolResults
+            ));
+        }
+    }
+
+    /**
+     * Generate streaming response using Ollama streaming model
+     */
+    private void generateStreamingLlmResponse(Long conversationId, String systemPrompt,
+                                               String userMessage,
+                                               AgentWebSocketHandler.AgentStreamingCallback callback) {
+        try {
+            // Build message history
+            List<ChatMessage> messages = new ArrayList<>();
+            messages.add(SystemMessage.from(systemPrompt));
+
+            // Add last 10 messages for context
+            List<Message> history = messageRepo.findByConversationIdOrderByCreatedAtAsc(conversationId);
+            int start = Math.max(0, history.size() - 10);
+            for (int i = start; i < history.size(); i++) {
+                Message msg = history.get(i);
+                if (msg.getRole() == Message.MessageRole.USER) {
+                    messages.add(UserMessage.from(msg.getContent()));
+                } else if (msg.getRole() == Message.MessageRole.AGENT) {
+                    messages.add(AiMessage.from(msg.getContent()));
+                }
+            }
+
+            StringBuilder fullResponse = new StringBuilder();
+
+            streamingChatModel.generate(messages, new StreamingResponseHandler<>() {
+                @Override
+                public void onNext(String token) {
+                    fullResponse.append(token);
+                    callback.onToken(token);
+                }
+
+                @Override
+                public void onComplete(Response<AiMessage> response) {
+                    String completeResponse = fullResponse.toString();
+                    List<Map<String, Object>> toolResults = new ArrayList<>();
+                    extractToolCalls(completeResponse, toolResults);
+
+                    // Save agent message
+                    Message agentMsg = Message.builder()
+                        .conversation(conversationRepo.findById(conversationId).orElseThrow())
+                        .role(Message.MessageRole.AGENT)
+                        .content(completeResponse)
+                        .metadata(objectMapper.valueToTree(toolResults).toString())
+                        .build();
+                    messageRepo.save(agentMsg);
+
+                    callback.onComplete(Map.of(
+                        "conversationId", conversationId,
+                        "intent", detectIntent(userMessage).name(),
+                        "tools", toolResults
+                    ));
+                }
+
+                @Override
+                public void onError(Throwable error) {
+                    log.error("Streaming error: {}", error.getMessage());
+                    callback.onError("Stream error: " + error.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            log.error("Streaming generation failed: {}", e.getMessage());
+            callback.onError("Failed to generate response: " + e.getMessage());
+        }
     }
 
     /**
@@ -251,7 +386,7 @@ public class AgentService {
             }
 
             // Generate response
-            Response<AiMessage> response = chatModel.chat(messages);
+            Response<AiMessage> response = chatModel.generate(messages);
             String content = response.content().text();
 
             // Parse tool calls from response (simple pattern matching)

@@ -1,10 +1,11 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AgentService, ChatMessage } from '../../services/agent.service';
+import { AgentWebSocketService, ChatMessage } from '../../services/agent-websocket.service';
 import { CartService } from '../../services/cart.service';
 import { ProductService, Product } from '../../services/product.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-agent',
@@ -69,7 +70,7 @@ import { ProductService, Product } from '../../services/product.service';
               <i class="fas fa-robot"></i>
             </div>
             <div class="message-content">
-              <div class="message-bubble" [innerHTML]="formatMessage(msg.content)"></div>
+              <div class="message-bubble" [innerHTML]="formatMessage(msg.content)"><span class="streaming-cursor" *ngIf="msg.streaming">▌</span></div>
 
               <!-- Product Cards in message -->
               <div class="product-carousel" *ngIf="msg.products?.length">
@@ -216,6 +217,17 @@ import { ProductService, Product } from '../../services/product.service';
       border-bottom-right-radius: 4px;
     }
     .message-time { font-size: 0.6875rem; color: var(--gray-400); padding: 0 0.25rem; }
+    .streaming-cursor {
+      display: inline-block;
+      animation: blink 1s infinite;
+      color: var(--primary);
+      font-weight: bold;
+      margin-left: 2px;
+    }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
 
     /* Product Carousel */
     .product-carousel {
@@ -293,19 +305,38 @@ import { ProductService, Product } from '../../services/product.service';
     }
   `]
 })
-export class AgentComponent implements AfterViewChecked {
+export class AgentComponent implements AfterViewChecked, OnDestroy {
   @ViewChild('chatArea') chatArea!: ElementRef;
   userInput = '';
+  private subscriptions: Subscription[] = [];
 
   constructor(
-    public agentService: AgentService,
+    public agentService: AgentWebSocketService,
     public cartService: CartService,
     private router: Router,
     private productService: ProductService
   ) {
+    // Subscribe to token events for real-time UI updates
+    this.subscriptions.push(
+      this.agentService.tokenReceived$.subscribe(token => {
+        this.scrollToBottom();
+      })
+    );
+
+    this.subscriptions.push(
+      this.agentService.streamComplete$.subscribe(result => {
+        this.scrollToBottom();
+      })
+    );
+
     if (this.agentService.messages().length === 0) {
       this.agentService.startConversation();
     }
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.agentService.disconnect();
   }
 
   ngAfterViewChecked() {

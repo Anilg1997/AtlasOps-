@@ -2,6 +2,7 @@ package com.shophub.agent.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -27,13 +28,12 @@ public class ProductEmbedding {
     private String category;
     private String brand;
 
-    @Column(precision = 10, scale = 2)
-    private Double price;
+    private BigDecimal price;
 
     @Column(name = "discount_percentage")
-    private Double discountPercentage;
+    private BigDecimal discountPercentage;
 
-    private Double rating;
+    private BigDecimal rating;
     private Integer stock;
     private String thumbnail;
 
