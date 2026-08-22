@@ -4,6 +4,7 @@ import com.shophub.agent.model.OrderIssue;
 import com.shophub.agent.repository.OrderIssueRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -33,18 +34,9 @@ public class OrderIssueService {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
+    @Autowired
     public OrderIssueService(OrderIssueRepository issueRepository, IssueDetectionTool issueDetectionTool,
                              KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper) {
-        this.issueRepository = issueRepository;
-        this.issueDetectionTool = issueDetectionTool;
-        this.kafkaTemplate = kafkaTemplate;
-        this.objectMapper = objectMapper;
-    }
-
-    // Package-private constructor for testing with mocks
-    OrderIssueService(OrderIssueRepository issueRepository, IssueDetectionTool issueDetectionTool,
-                      KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper,
-                      @SuppressWarnings("unused") boolean testMode) {
         this.issueRepository = issueRepository;
         this.issueDetectionTool = issueDetectionTool;
         this.kafkaTemplate = kafkaTemplate;

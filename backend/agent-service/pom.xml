@@ -119,24 +119,37 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>net.bytebuddy</groupId>
-            <artifactId>byte-buddy</artifactId>
-            <version>1.15.11</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.bytebuddy</groupId>
-            <artifactId>byte-buddy-agent</artifactId>
-            <version>1.15.11</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
 
     </dependencies>
+
+    <!-- Profile for Java 24+ local dev: overrides byte-buddy for Mockito compatibility.
+         Do NOT activate this in Docker/CI where Hibernate needs the older managed version. -->
+    <profiles>
+        <profile>
+            <id>java24-test</id>
+            <activation>
+                <jdk>[22,)</jdk>
+            </activation>
+            <dependencyManagement>
+                <dependencies>
+                    <dependency>
+                        <groupId>net.bytebuddy</groupId>
+                        <artifactId>byte-buddy</artifactId>
+                        <version>1.15.11</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>net.bytebuddy</groupId>
+                        <artifactId>byte-buddy-agent</artifactId>
+                        <version>1.15.11</version>
+                    </dependency>
+                </dependencies>
+            </dependencyManagement>
+        </profile>
+    </profiles>
 
     <build>
         <plugins>
