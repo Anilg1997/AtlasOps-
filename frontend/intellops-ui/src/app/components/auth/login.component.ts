@@ -29,7 +29,7 @@ import { AuthService } from '../../services/auth.service';
                 <label>Email or Username</label>
                 <div class="input-wrap" [class.focused]="emailFocused()">
                   <i class="fas fa-user"></i>
-                  <input type="text" [(ngModel)]="email" name="email"
+                  <input type="text" [ngModel]="email()" (ngModelChange)="email.set($event)" name="email"
                          placeholder="Enter email or username"
                          (focus)="emailFocused.set(true)"
                          (blur)="emailFocused.set(false); validateEmail()"
@@ -82,9 +82,8 @@ import { AuthService } from '../../services/auth.service';
               <div class="form-group" [class.error]="passwordError()">
                 <label>Password</label>
                 <div class="input-wrap" [class.focused]="passwordFocused()">
-                  <i class="fas fa-lock"></i>
-                  <input [type]="showPassword() ? 'text' : 'password'"
-                         [(ngModel)]="password" name="password"
+                  <i class="fas fa-lock"></i>                    <input [type]="showPassword() ? 'text' : 'password'"
+                         [ngModel]="password()" (ngModelChange)="password.set($event)" name="password"
                          placeholder="Enter your password"
                          (focus)="passwordFocused.set(true)"
                          (blur)="passwordFocused.set(false)"
@@ -327,7 +326,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class LoginComponent {
   email = signal('');
-  password = '';
+  password = signal('');
   step = signal<1 | 2>(1);
   activeTab = signal<'user' | 'admin'>('user');
   showPassword = signal(false);
@@ -339,7 +338,7 @@ export class LoginComponent {
   passwordFocused = signal(false);
 
   passwordStrength = computed(() => {
-    const pw = this.password;
+    const pw = this.password();
     if (!pw) return 0;
     let score = 0;
     if (pw.length >= 6) score += 20;
@@ -379,13 +378,13 @@ export class LoginComponent {
   }
 
   onLogin() {
-    if (!this.password) { this.passwordError.set('Password is required'); return; }
+    if (!this.password()) { this.passwordError.set('Password is required'); return; }
     this.passwordError.set('');
     this.loading.set(true);
     this.error.set('');
 
     const username = this.email();
-    this.authService.login(username, this.password).subscribe({
+    this.authService.login(username, this.password()).subscribe({
       next: () => {
         this.loading.set(false);
         this.router.navigate(['/home']);

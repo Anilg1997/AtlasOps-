@@ -80,7 +80,6 @@ import { Subscription } from 'rxjs';
               </div>
             </div>
           </div>
-          </div>
 
           <!-- Messages -->
           <div class="message" *ngFor="let msg of agentService.messages()" [ngClass]="msg.role">
