@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { RegisterComponent } from './register.component';
-import { AuthService, AuthResponse, User } from '../../../services/auth.service';
+import { AuthService, AuthResponse, AuthUser } from '../../../services/auth.service';
 import { ToastService } from '../../../services/notification/toast.service';
 
 describe('RegisterComponent', () => {
@@ -13,21 +13,21 @@ describe('RegisterComponent', () => {
   let toastService: ToastService;
   let router: Router;
 
-  const mockUser: User = {
+  const mockUser: AuthUser = {
     id: 2,
+    username: 'newuser',
     email: 'new@intellops.dev',
     firstName: 'New',
     lastName: 'Hire',
-    fullName: 'New Hire',
-    role: 'OPS_USER'
+    gender: 'female',
+    image: '',
+    role: 'user'
   };
 
   const mockAuthResponse: AuthResponse = {
-    token: 'jwt-token',
-    refreshToken: 'refresh-token',
-    tokenType: 'Bearer',
-    expiresIn: 3600,
-    user: mockUser
+    ...mockUser,
+    accessToken: 'jwt-token',
+    refreshToken: 'refresh-token'
   };
 
   beforeEach(async () => {
@@ -66,7 +66,8 @@ describe('RegisterComponent', () => {
       email: 'new@intellops.dev',
       password: 'secret123',
       firstName: 'New',
-      lastName: 'Hire'
+      lastName: 'Hire',
+      username: 'new@intellops.dev'
     });
     expect(navigateSpy).toHaveBeenCalledWith(['/register/success']);
     expect(component.loading).toBeFalse();

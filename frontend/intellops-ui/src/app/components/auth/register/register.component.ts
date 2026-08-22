@@ -74,7 +74,7 @@ export class RegisterComponent {
   onSubmit() {
     this.loading = true;
     this.error = '';
-    this.authService.register({ email: this.email, password: this.password, firstName: this.firstName, lastName: this.lastName })
+    this.authService.register({ username: this.email, email: this.email, password: this.password, firstName: this.firstName, lastName: this.lastName })
       .subscribe({
         next: () => {
           this.loading = false;

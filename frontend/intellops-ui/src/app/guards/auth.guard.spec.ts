@@ -40,6 +40,6 @@ describe('authGuard', () => {
     const result = TestBed.runInInjectionContext(() => authGuard(fakeRoute, fakeState));
 
     expect(result).toBeFalse();
-    expect(routerSpy.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { returnUrl: '/orders' } });
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/login']);
   });
 });

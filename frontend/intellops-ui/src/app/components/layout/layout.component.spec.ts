@@ -2,25 +2,27 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { LayoutComponent } from './layout.component';
-import { AuthService, User } from '../../services/auth.service';
+import { AuthService, AuthUser } from '../../services/auth.service';
 
 describe('LayoutComponent', () => {
   let fixture: ComponentFixture<LayoutComponent>;
   let component: LayoutComponent;
   let authServiceSpy: jasmine.SpyObj<AuthService>;
 
-  const mockUser: User = {
+  const mockUser: AuthUser = {
     id: 1,
+    username: 'ops',
     email: 'ops@intellops.dev',
     firstName: 'Ops',
     lastName: 'User',
-    fullName: 'Ops User',
-    role: 'OPS_ADMIN'
+    gender: 'male',
+    image: '',
+    role: 'admin'
   };
 
   beforeEach(async () => {
     authServiceSpy = jasmine.createSpyObj('AuthService', ['logout']);
-    authServiceSpy.user = signal<User | null>(mockUser) as any;
+    authServiceSpy.user = signal<AuthUser | null>(mockUser) as any;
 
     await TestBed.configureTestingModule({
       imports: [LayoutComponent],
@@ -41,37 +43,34 @@ describe('LayoutComponent', () => {
   it('should render the brand, nav links, and user name', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('IntelliOps');
-    expect(compiled.textContent).toContain('Dashboard');
-    expect(compiled.textContent).toContain('Orders');
-    expect(compiled.textContent).toContain('AI Co-Pilot');
-    expect(compiled.textContent).toContain('Inventory');
-    expect(compiled.textContent).toContain('Billing');
-    expect(compiled.textContent).toContain('Activity Feed');
-    expect(compiled.textContent).toContain('Health');
-    expect(compiled.textContent).toContain('Ops User');
+    expect(compiled.textContent).toContain('ShopHub');
+    expect(compiled.textContent).toContain('Home');
+    expect(compiled.textContent).toContain('Products');
+    expect(compiled.textContent).toContain('Categories');
+    expect(compiled.textContent).toContain('AI Agent');
+    expect(compiled.textContent).toContain('Ops');
   });
 
-  it('should link to the feed page', () => {
+  it('should link to the home page', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('a[href="/feed"]')).toBeTruthy();
+    expect(compiled.querySelector('a[href="/home"]')).toBeTruthy();
   });
 
-  it('should logout when the logout button is clicked', () => {
+  it('should logout when the sign out button is clicked', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const buttons = compiled.querySelectorAll('button');
-    const logoutBtn = Array.from(buttons).find(b => b.textContent?.includes('Logout'));
+    const logoutBtn = Array.from(buttons).find(b => b.textContent?.includes('Sign Out'));
     expect(logoutBtn).toBeTruthy();
     logoutBtn?.click();
     expect(authServiceSpy.logout).toHaveBeenCalled();
   });
 
-  it('should fall back to a generic user label when no user is set', () => {
-    authServiceSpy.user = signal<User | null>(null) as any;
+  it('should hide user menu when no user is set', () => {
+    authServiceSpy.user = signal<AuthUser | null>(null) as any;
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.user-name')?.textContent).toContain('User');
+    expect(compiled.querySelector('.user-menu')).toBeNull();
   });
 });

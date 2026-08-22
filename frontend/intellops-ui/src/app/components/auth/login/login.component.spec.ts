@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { LoginComponent } from './login.component';
-import { AuthService, AuthResponse, User } from '../../../services/auth.service';
+import { AuthService, AuthResponse, AuthUser } from '../../../services/auth.service';
 import { ToastService } from '../../../services/notification/toast.service';
 
 describe('LoginComponent', () => {
@@ -13,21 +13,21 @@ describe('LoginComponent', () => {
   let toastService: ToastService;
   let router: Router;
 
-  const mockUser: User = {
+  const mockUser: AuthUser = {
     id: 1,
+    username: 'ops',
     email: 'ops@intellops.dev',
     firstName: 'Ops',
     lastName: 'User',
-    fullName: 'Ops User',
-    role: 'OPS_ADMIN'
+    gender: 'male',
+    image: '',
+    role: 'admin'
   };
 
   const mockAuthResponse: AuthResponse = {
-    token: 'jwt-token',
-    refreshToken: 'refresh-token',
-    tokenType: 'Bearer',
-    expiresIn: 3600,
-    user: mockUser
+    ...mockUser,
+    accessToken: 'jwt-token',
+    refreshToken: 'refresh-token'
   };
 
   beforeEach(async () => {

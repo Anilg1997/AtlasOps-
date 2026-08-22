@@ -16,10 +16,10 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have the 'IntelliOps' title`, () => {
+  it(`should have the 'ShopHub' title`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('IntelliOps');
+    expect(app.title).toEqual('ShopHub');
   });
 
   it('should render a router outlet', () => {
