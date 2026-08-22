@@ -273,13 +273,15 @@ public class AgentService {
     private AgentIntent detectIntent(String message) {
         String lower = message.toLowerCase();
 
-        if (lower.matches(".*(buy|purchase|checkout|pay|order).*")) return AgentIntent.CHECKOUT;
+        if (lower.matches(".*(buy|purchase|checkout|pay|order now).*")) return AgentIntent.CHECKOUT;
         if (lower.matches(".*(add.*cart|cart|basket).*")) return AgentIntent.ADD_TO_CART;
         if (lower.matches(".*(recommend|suggest|show|find|search|look for|want|need).*")) return AgentIntent.SEARCH;
         if (lower.matches(".*(price|cost|budget|cheap|afford).*")) return AgentIntent.PRICE_QUERY;
         if (lower.matches(".*(compare|vs|versus|difference).*")) return AgentIntent.COMPARE;
         if (lower.matches(".*(review|rating|feedback).*")) return AgentIntent.REVIEW;
         if (lower.matches(".*(ship|delivery|deliver|track).*")) return AgentIntent.SHIPPING;
+        if (lower.matches(".*(order issue|order problem|payment failed|refund|replace|exchange|stuck|delayed|wrong item|damaged|missing|complain|support|help with order).*")) return AgentIntent.ORDER_ISSUE;
+        if (lower.matches(".*(detect issue|check order|order status|issue with).*")) return AgentIntent.ORDER_ISSUE;
         if (lower.matches(".*(hello|hi|hey|greet).*")) return AgentIntent.GREETING;
         if (lower.matches(".*(thank|thanks|bye|goodbye).*")) return AgentIntent.FAREWELL;
         return AgentIntent.GENERAL;
@@ -336,8 +338,10 @@ public class AgentService {
         return """
             You are ShopHub AI — an intelligent shopping assistant. You help users find products,
             compare options, answer questions about pricing/shipping/reviews, and guide them through checkout.
+            You also proactively detect and resolve order issues autonomously.
 
             CAPABILITIES (MCP Tools):
+            — Shopping Tools —
             - search_products(query): Search product catalog
             - get_product_details(id): Get detailed product info
             - add_to_cart(product_id, quantity): Add item to cart
@@ -345,6 +349,13 @@ public class AgentService {
             - process_checkout(): Complete the purchase
             - get_product_reviews(product_id): Show product reviews
             - compare_products(ids): Compare multiple products
+
+            — Order Issue Resolution Tools —
+            - detect_order_issues(orderId): Check order for payment, stock, delivery, duplicate, or price issues
+            - resolve_payment_retry(orderId): Automatically retry a failed payment
+            - resolve_stock_substitution(orderId, itemId): Find similar in-stock products as alternatives
+            - resolve_delivery_delay(orderId): Check delivery status and offer compensation
+            - escalate_to_human(orderId, reason): Create support ticket for issues you can't resolve
 
             RULES:
             1. Be helpful, concise, and friendly
@@ -355,6 +366,9 @@ public class AgentService {
             6. If you don't have enough info, ask clarifying questions
             7. Format responses with markdown for readability
             8. Be proactive — suggest related products and deals
+            9. When users mention order problems, immediately run detect_order_issues
+            10. Always attempt automated resolution before escalating to human
+            11. Show the user what you detected, decided, and did (reasoning trace)
 
             CURRENT CONTEXT:
             %s
@@ -465,6 +479,19 @@ public class AgentService {
                       "Redirecting to checkout page...";
             }
 
+            case ORDER_ISSUE -> {
+                tools.add(Map.of("type", "detect_order_issues", "action", "issue_detection"));
+                yield "🔍 I'll check your order for any issues right away.\n\n" +
+                      "Please provide your **order number** (e.g., ORD-20260822-ABC123) " +
+                      "and I'll run a full diagnostic including:\n" +
+                      "• Payment status check\n" +
+                      "• Stock availability verification\n" +
+                      "• Delivery timeline review\n" +
+                      "• Duplicate order detection\n" +
+                      "• Price mismatch verification\n\n" +
+                      "I'll automatically resolve what I can and escalate what I can't.";
+            }
+
             default -> {
                 var results = vectorStore.searchProducts(extractSearchTerms(lower), 3);
                 StringBuilder response = new StringBuilder();
@@ -547,6 +574,6 @@ public class AgentService {
 
     public enum AgentIntent {
         GREETING, SEARCH, PRICE_QUERY, ADD_TO_CART, CHECKOUT,
-        COMPARE, REVIEW, SHIPPING, FAREWELL, GENERAL
+        COMPARE, REVIEW, SHIPPING, ORDER_ISSUE, FAREWELL, GENERAL
     }
 }

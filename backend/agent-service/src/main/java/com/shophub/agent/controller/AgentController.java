@@ -1,11 +1,14 @@
 package com.shophub.agent.controller;
 
 import com.shophub.agent.service.AgentService;
+import com.shophub.agent.service.IssueDetectionTool;
+import com.shophub.agent.service.OrderIssueService;
 import com.shophub.agent.service.VectorStoreService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -16,6 +19,8 @@ public class AgentController {
 
     private final AgentService agentService;
     private final VectorStoreService vectorStore;
+    private final OrderIssueService orderIssueService;
+    private final IssueDetectionTool issueDetectionTool;
 
     /**
      * Send a message to the AI agent
@@ -61,6 +66,39 @@ public class AgentController {
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
         return ResponseEntity.ok(vectorStore.getProductStats());
+    }
+
+    /**
+     * Detect issues for a specific order
+     */
+    @GetMapping("/orders/{orderNumber}/issues")
+    public ResponseEntity<Map<String, Object>> detectOrderIssues(@PathVariable String orderNumber) {
+        String detection = issueDetectionTool.detectOrderIssues(orderNumber);
+        List<Map<String, Object>> timeline = orderIssueService.getOrderTimeline(orderNumber);
+        return ResponseEntity.ok(Map.of(
+            "orderNumber", orderNumber,
+            "detection", detection,
+            "timeline", timeline
+        ));
+    }
+
+    /**
+     * Get order issue resolution timeline
+     */
+    @GetMapping("/orders/{orderNumber}/timeline")
+    public ResponseEntity<List<Map<String, Object>>> getOrderTimeline(
+            @PathVariable String orderNumber) {
+        return ResponseEntity.ok(orderIssueService.getOrderTimeline(orderNumber));
+    }
+
+    /**
+     * Trigger manual issue detection for an order
+     */
+    @PostMapping("/orders/{orderNumber}/detect")
+    public ResponseEntity<Map<String, String>> triggerDetection(
+            @PathVariable String orderNumber) {
+        String result = issueDetectionTool.detectOrderIssues(orderNumber);
+        return ResponseEntity.ok(Map.of("orderNumber", orderNumber, "result", result));
     }
 
     /**

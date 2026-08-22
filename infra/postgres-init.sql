@@ -140,6 +140,35 @@ CREATE TABLE IF NOT EXISTS agent_messages (
 CREATE INDEX IF NOT EXISTS idx_agent_messages_conv ON agent_messages(conversation_id);
 
 -- ═══════════════════════════════════════════════════════════════
+-- AGENT ORDER ISSUE TRACKING (Phase 3: Agentic Automation)
+-- ═══════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS order_issues (
+    id BIGSERIAL PRIMARY KEY,
+    order_number VARCHAR(50) NOT NULL,
+    user_id BIGINT REFERENCES users(id),
+    issue_type VARCHAR(30) NOT NULL CHECK (issue_type IN (
+        'PAYMENT_FAILED', 'PAYMENT_PENDING', 'OUT_OF_STOCK',
+        'DELIVERY_DELAYED', 'DUPLICATE_ORDER', 'PRICE_MISMATCH'
+    )),
+    status VARCHAR(20) NOT NULL DEFAULT 'DETECTED' CHECK (status IN (
+        'DETECTED', 'RESOLVING', 'RESOLVED', 'ESCALATED', 'FAILED'
+    )),
+    detection_details TEXT,
+    resolution_action TEXT,
+    resolution_result TEXT,
+    resolved_automatically BOOLEAN DEFAULT FALSE,
+    escalated_to_human BOOLEAN DEFAULT FALSE,
+    escalation_reason TEXT,
+    retry_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_order_issues_number ON order_issues(order_number);
+CREATE INDEX IF NOT EXISTS idx_order_issues_status ON order_issues(status);
+CREATE INDEX IF NOT EXISTS idx_order_issues_type ON order_issues(issue_type);
+
+-- ═══════════════════════════════════════════════════════════════
 -- BILLING SERVICE TABLES
 -- ═══════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS invoices (

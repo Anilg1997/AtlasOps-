@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { AgentWebSocketService, ChatMessage } from '../../services/agent-websocket.service';
 import { CartService } from '../../services/cart.service';
 import { ProductService, Product } from '../../services/product.service';
+import { OrderService } from '../../services/order.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -62,6 +63,23 @@ import { Subscription } from 'rxjs';
                 <i class="fas fa-shirt"></i> Fashion
               </button>
             </div>
+
+            <!-- Order Issue Quick Actions -->
+            <div class="issue-prompts">
+              <h4><i class="fas fa-shield-halved"></i> Order Support</h4>
+              <div class="issue-prompt-grid">
+                <button class="issue-prompt" (click)="sendQuickPrompt('I have an issue with my order')">
+                  <i class="fas fa-triangle-exclamation"></i> Report Order Issue
+                </button>
+                <button class="issue-prompt" (click)="sendQuickPrompt('My payment failed, can you retry?')">
+                  <i class="fas fa-credit-card"></i> Payment Issue
+                </button>
+                <button class="issue-prompt" (click)="sendQuickPrompt('My delivery is delayed')">
+                  <i class="fas fa-truck"></i> Delivery Delay
+                </button>
+              </div>
+            </div>
+          </div>
           </div>
 
           <!-- Messages -->
@@ -298,6 +316,45 @@ import { Subscription } from 'rxjs';
       &:disabled { opacity: 0.4; cursor: not-allowed; }
     }
 
+    /* Issue Quick Prompts */
+    .issue-prompts {
+      margin-top: 2rem; width: 100%; max-width: 600px;
+      h4 { font-size: 0.9375rem; font-weight: 700; color: var(--gray-900); margin-bottom: 1rem;
+        display: flex; align-items: center; gap: 0.5rem;
+        i { color: var(--danger); } }
+    }
+    .issue-prompt-grid { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+    .issue-prompt {
+      display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem;
+      background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px;
+      font-size: 0.875rem; font-weight: 500; color: #b91c1c; cursor: pointer;
+      transition: all 0.2s; font-family: inherit;
+      &:hover { background: #fee2e2; border-color: #f87171; transform: translateY(-1px); }
+      i { font-size: 0.875rem; }
+    }
+
+    /* Order Activity Timeline */
+    .order-activity {
+      margin: 0.5rem 0 1rem;
+      padding: 1rem;
+      background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+      border-radius: 12px;
+      border: 1px solid #bfdbfe;
+      h4 { font-size: 0.8125rem; font-weight: 700; color: var(--gray-800); margin-bottom: 0.75rem;
+        display: flex; align-items: center; gap: 0.375rem; }
+    }
+    .activity-timeline { display: flex; flex-direction: column; gap: 0.5rem; }
+    .activity-step {
+      display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--gray-700);
+      .step-icon {
+        width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 0.6875rem; color: white; flex-shrink: 0; }
+      .step-icon.detected { background: var(--warning); }
+      .step-icon.processing { background: var(--primary); animation: spin 1s linear infinite; }
+      .step-icon.resolved { background: var(--success); }
+      .step-icon.escalated { background: var(--danger); }
+    }
+
     @media (max-width: 768px) {
       .agent-page { height: calc(100vh - 68px - 2rem); }
       .message { max-width: 95%; }
@@ -314,7 +371,8 @@ export class AgentComponent implements AfterViewChecked, OnDestroy {
     public agentService: AgentWebSocketService,
     public cartService: CartService,
     private router: Router,
-    private productService: ProductService
+    private productService: ProductService,
+    private orderService: OrderService
   ) {
     // Subscribe to token events for real-time UI updates
     this.subscriptions.push(
@@ -360,6 +418,8 @@ export class AgentComponent implements AfterViewChecked, OnDestroy {
     } else if (action.type === 'add_to_cart' && action.data) {
       action.data.forEach((p: Product) => this.cartService.addItem(p));
       this.agentService.processUserInput('checkout');
+    } else if (action.type === 'detect_order_issues') {
+      this.sendQuickPrompt('detect issues for my recent order');
     }
   }
 
@@ -386,6 +446,7 @@ export class AgentComponent implements AfterViewChecked, OnDestroy {
     switch (type) {
       case 'add_to_cart': return 'success';
       case 'checkout': return 'primary';
+      case 'detect_order_issues': return 'warning';
       default: return 'secondary';
     }
   }
@@ -395,6 +456,7 @@ export class AgentComponent implements AfterViewChecked, OnDestroy {
       case 'add_to_cart': return 'fa-cart-plus';
       case 'checkout': return 'fa-credit-card';
       case 'show_products': return 'fa-eye';
+      case 'detect_order_issues': return 'fa-magnifying-glass';
       default: return 'fa-comment';
     }
   }
@@ -408,6 +470,7 @@ export class AgentComponent implements AfterViewChecked, OnDestroy {
     if (content.includes('budget')) return 'Enter your budget (e.g., $100)...';
     if (content.includes('brand')) return 'Enter brand or "any"...';
     if (content.includes('add') || content.includes('recommendation')) return 'Type add 1, add all, checkout...';
+    if (content.includes('order number')) return 'Enter order number (e.g., ORD-20260822-ABC123)...';
     return 'Type a message...';
   }
 

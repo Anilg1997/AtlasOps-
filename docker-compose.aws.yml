@@ -1,0 +1,372 @@
+version: '3.8'
+
+# ═══════════════════════════════════════════════════════════════
+# ShopHub — AWS Deployment Configuration
+# Use this for AWS demo deployment (EC2 with Docker Compose)
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  # ── Database (use RDS in production, local for demo) ──
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: shop-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shophub}
+      POSTGRES_USER: ${POSTGRES_USER:-shophub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shophub_secret}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shophub}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: postgres
+    networks:
+      - shophub-net
+
+  # ── Message Broker (single-node for demo) ──
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: shop-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: zookeeper
+    networks:
+      - shophub-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: shop-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: kafka
+    networks:
+      - shophub-net
+
+  # ── AI / LLM ──
+  ollama:
+    image: ollama/ollama:latest
+    container_name: shop-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: ollama
+    networks:
+      - shophub-net
+
+  # ── Microservices ──
+  gateway:
+    build:
+      context: .
+      dockerfile: backend/gateway-service/Dockerfile
+    container_name: shop-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - AUTH_SERVICE_URL=http://auth-service:8081
+      - PRODUCT_SERVICE_URL=http://product-service:8082
+      - ORDER_SERVICE_URL=http://order-service:8083
+      - AGENT_SERVICE_URL=http://agent-service:8084
+      - BILLING_SERVICE_URL=http://billing-service:8085
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      agent-service:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: gateway
+    networks:
+      - shophub-net
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: backend/auth-service/Dockerfile
+    container_name: shop-auth
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-shophub}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-shophub}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-shophub_secret}
+      - JWT_SECRET=${JWT_SECRET:-shophub-super-secret-key-for-jwt-tokens-min-256-bits-long}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: auth
+    networks:
+      - shophub-net
+
+  product-service:
+    build:
+      context: .
+      dockerfile: backend/product-service/Dockerfile
+    container_name: shop-product
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-shophub}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-shophub}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-shophub_secret}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - DUMMYJSON_API_URL=https://dummyjson.com
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: product
+    networks:
+      - shophub-net
+
+  order-service:
+    build:
+      context: .
+      dockerfile: backend/order-service/Dockerfile
+    container_name: shop-order
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-shophub}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-shophub}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-shophub_secret}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: order
+    networks:
+      - shophub-net
+
+  agent-service:
+    build:
+      context: .
+      dockerfile: backend/agent-service/Dockerfile
+    container_name: shop-agent
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-shophub}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-shophub}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-shophub_secret}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - PRODUCT_SERVICE_URL=http://product-service:8082
+      - ORDER_SERVICE_URL=http://order-service:8083
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: agent
+    networks:
+      - shophub-net
+
+  billing-service:
+    build:
+      context: .
+      dockerfile: backend/billing-service/Dockerfile
+    container_name: shop-billing
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-shophub}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER:-shophub}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-shophub_secret}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8085/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: billing
+    networks:
+      - shophub-net
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: backend/notification-service/Dockerfile
+    container_name: shop-notification
+    ports:
+      - "8086:8086"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - N8N_WEBHOOK_URL=http://n8n:5678/webhook/order-events
+    depends_on:
+      kafka:
+        condition: service_started
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: notification
+    networks:
+      - shophub-net
+
+  # ── Frontend ──
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/intellops-ui/Dockerfile
+    container_name: shop-frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: frontend
+    networks:
+      - shophub-net
+
+  # ── Automation ──
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: shop-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=UTC
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./infra/n8n-workflows:/home/node/workflows
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: /ecs/shophub
+        awslogs-region: ${AWS_REGION:-us-east-1}
+        awslogs-stream-prefix: n8n
+    networks:
+      - shophub-net
+
+volumes:
+  postgres_data:
+  ollama_data:
+  n8n_data:
+
+networks:
+  shophub-net:
+    driver: bridge

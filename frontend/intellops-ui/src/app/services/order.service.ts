@@ -76,4 +76,17 @@ export class OrderService {
   getStats(): Observable<any> {
     return this.http.get(`${this.API_URL}/stats`);
   }
+
+  // Agent service endpoints for order issue resolution
+  getOrderIssues(orderNumber: string): Observable<any> {
+    return this.http.get(`/api/v1/agent/orders/${orderNumber}/issues`);
+  }
+
+  getOrderTimeline(orderNumber: string): Observable<any[]> {
+    return this.http.get<any[]>(`/api/v1/agent/orders/${orderNumber}/timeline`);
+  }
+
+  triggerIssueDetection(orderNumber: string): Observable<any> {
+    return this.http.post(`/api/v1/agent/orders/${orderNumber}/detect`, {});
+  }
 }
